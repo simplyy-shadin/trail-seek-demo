@@ -34,5 +34,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - name: Refresh CocoaPods sandbox in ephemeral CI checkout
+        run: |
+          rm -rf ios/Pods ios/Podfile.lock
+          (cd ios && pod install --repo-update)
       - name: Compile unsigned iOS app using existing Xcode project
         run: flutter build ios --release --no-codesign
