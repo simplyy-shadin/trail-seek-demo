@@ -25,10 +25,10 @@ abstract final class AppLinks {
     required String code,
     String? securityKey,
   }) =>
-      'Join my Trail Seek group "$groupName" for $adventureName on $date.\\n'
-      'Code: $code\\n'
-      '${joinDeepLink(code, securityKey: securityKey)}\\n'
+      'Join my Trail Seek group "$groupName" for $adventureName on $date.\n'
+      'Code: $code\n'
+      '${joinDeepLink(code, securityKey: securityKey)}\n'
       'Scan this private invitation QR/link in Trail Seek to join securely. '
-      'Do not post the invite publicly.\\n'
+      'Do not post the invite publicly.\n'
       'Get the Android app: $androidApk';
 }
