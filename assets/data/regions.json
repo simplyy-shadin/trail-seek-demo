@@ -1,0 +1,5 @@
+[
+  {"id": "thrissur", "name": "Thrissur, Kerala", "state": "Kerala", "tagline": "Forest Department eco-tourism programmes", "enabled": true, "coverHue": 140},
+  {"id": "kerala-more", "name": "Other Kerala districts", "state": "Kerala", "tagline": "Coming soon", "enabled": false, "coverHue": 120},
+  {"id": "tamil-nadu", "name": "Tamil Nadu", "state": "Tamil Nadu", "tagline": "Coming soon", "enabled": false, "coverHue": 30}
+]

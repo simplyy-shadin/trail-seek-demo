@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trail Seek — Official Project Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #10160f; --muted: #556052; --line: #dfe6dc; --soft: #f3f7f0;
+    --forest: #0e3a1e; --deep: #07140b; --neon: #9dff1e; --lime: #6fcf00;
+    --amber: #f2a900; --red: #e5484d; --blue: #2f80ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Inter, system-ui, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.55; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; min-height: 297mm; padding: 18mm 18mm 19mm; page-break-after: always; position: relative; }
+  .page:last-child { page-break-after: auto; }
+  h1, h2, h3, .display { font-family: Sora, Inter, sans-serif; letter-spacing: -0.2pt; }
+  h2 { font-size: 19pt; color: var(--forest); margin: 0 0 4pt; line-height: 1.2; }
+  h2 .num { color: var(--lime); margin-right: 8pt; }
+  .kicker { text-transform: uppercase; letter-spacing: 1.6pt; font-size: 7.8pt; font-weight: 700; color: var(--lime); margin-bottom: 4pt; }
+  .lead { font-size: 11.5pt; color: var(--muted); margin: 6pt 0 14pt; }
+  h3 { font-size: 12pt; color: var(--forest); margin: 14pt 0 4pt; }
+  p { margin: 0 0 8pt; }
+  ul { margin: 0 0 9pt 0; padding-left: 15pt; }
+  li { margin-bottom: 3pt; }
+  li::marker { color: var(--lime); }
+  strong { color: var(--forest); }
+  .rule { height: 3px; width: 46px; background: var(--neon); border-radius: 2px; margin: 8pt 0 12pt; }
+
+  /* cover */
+  .cover { padding: 0; color: #fff; background: var(--deep); overflow: hidden; }
+  .cover .photo { position: absolute; inset: 0; background: url('../../assets/images/thrissur/peechi-trail-2.jpg') center/cover; filter: saturate(1.1); }
+  .cover .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,20,11,.55) 0%, rgba(7,20,11,.25) 35%, rgba(7,20,11,.92) 70%, #07140b 100%); }
+  .cover .inner { position: absolute; inset: 0; padding: 22mm 20mm; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 10pt; font-family: Sora; font-weight: 800; font-size: 15pt; letter-spacing: 3pt; }
+  .brand .mark { width: 30pt; height: 30pt; border-radius: 9pt; background: var(--neon); display: grid; place-items: center; color: var(--deep); font-size: 15pt; letter-spacing: 0; }
+  .cover .title { margin-top: auto; }
+  .cover .tag { display: inline-block; border: 1px solid var(--neon); color: var(--neon); border-radius: 999px; padding: 3pt 10pt; font-size: 8pt; font-weight: 700; letter-spacing: 1.5pt; text-transform: uppercase; }
+  .cover h1 { font-size: 40pt; line-height: 1.04; margin: 12pt 0 10pt; }
+  .cover h1 span { color: var(--neon); }
+  .cover .sub { font-size: 13pt; color: #d7e4d3; max-width: 140mm; }
+  .cover .meta { display: flex; gap: 28pt; margin-top: 22pt; padding-top: 14pt; border-top: 1px solid rgba(255,255,255,.18); font-size: 8.8pt; color: #b9c8b5; }
+  .cover .meta b { display: block; color: #fff; font-size: 10pt; }
+
+  /* contents */
+  .toc { margin-top: 10pt; }
+  .toc .row { display: flex; align-items: baseline; gap: 8pt; padding: 7pt 0; border-bottom: 1px solid var(--line); font-size: 11pt; }
+  .toc .row .n { width: 26pt; color: var(--lime); font-weight: 800; font-family: Sora; }
+  .toc .row .t { flex: 1; font-weight: 600; }
+  .toc .row .d { color: var(--muted); font-size: 9pt; }
+
+  /* blocks */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; }
+  .card { border: 1px solid var(--line); border-radius: 12pt; padding: 11pt 12pt; background: #fff; break-inside: avoid; }
+  .card.soft { background: var(--soft); border-color: transparent; }
+  .card.dark { background: var(--deep); color: #e8f1e4; border-color: var(--deep); }
+  .card.dark strong, .card.dark h4 { color: var(--neon); }
+  .card h4 { margin: 0 0 4pt; font-size: 10.5pt; font-family: Sora; color: var(--forest); }
+  .card p { margin: 0; font-size: 9.3pt; color: var(--muted); }
+  .card.dark p { color: #c4d3bf; }
+  .ico { width: 24pt; height: 24pt; border-radius: 7pt; background: var(--neon); color: var(--deep); display: grid; place-items: center; font-weight: 800; font-size: 11pt; margin-bottom: 6pt; font-family: Sora; }
+  .stat { text-align: left; }
+  .stat .v { font-family: Sora; font-size: 22pt; font-weight: 800; color: var(--forest); line-height: 1.1; }
+  .stat .l { font-size: 8.8pt; color: var(--muted); }
+  .callout { border-left: 4px solid var(--neon); background: var(--soft); padding: 10pt 13pt; border-radius: 0 10pt 10pt 0; margin: 10pt 0; break-inside: avoid; }
+  .callout p:last-child { margin: 0; }
+  .banner { height: 52mm; border-radius: 14pt; background-size: cover; background-position: center; margin: 4pt 0 14pt; position: relative; overflow: hidden; }
+  .banner .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 22pt 14pt 10pt; background: linear-gradient(180deg, transparent, rgba(7,20,11,.85)); color: #fff; font-weight: 700; font-family: Sora; font-size: 11pt; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 9.2pt; break-inside: avoid; }
+  th { text-align: left; background: var(--forest); color: #fff; padding: 6pt 8pt; font-weight: 600; }
+  th:first-child { border-radius: 8pt 0 0 0; } th:last-child { border-radius: 0 8pt 0 0; }
+  td { padding: 6pt 8pt; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafcf8; }
+  .yes { color: var(--lime); font-weight: 800; } .no { color: #b8c0b4; } .part { color: var(--amber); font-weight: 700; }
+
+  /* flows */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 10pt 0 14pt; break-inside: avoid; }
+  .flow .step { flex: 1; background: var(--soft); border-radius: 10pt; padding: 9pt 9pt 10pt; position: relative; }
+  .flow .step + .step { margin-left: 14pt; }
+  .flow .step + .step::before { content: '›'; position: absolute; left: -12pt; top: 50%; transform: translateY(-55%); color: var(--lime); font-size: 18pt; font-weight: 800; }
+  .flow .step .k { font-family: Sora; font-weight: 800; color: var(--lime); font-size: 9pt; }
+  .flow .step b { display: block; font-size: 9.6pt; color: var(--forest); margin: 1pt 0 2pt; }
+  .flow .step span { font-size: 8.4pt; color: var(--muted); line-height: 1.4; display: block; }
+  .states { display: flex; border-radius: 10pt; overflow: hidden; margin: 8pt 0 12pt; break-inside: avoid; }
+  .states div { flex: 1; padding: 8pt 8pt; color: #fff; font-size: 8.4pt; }
+  .states div b { display: block; font-size: 9.4pt; font-family: Sora; }
+  .avatars { display: flex; gap: 6pt; margin: 8pt 0 10pt; }
+  .avatars img { width: 25mm; height: 38mm; object-fit: cover; border-radius: 9pt; border: 2px solid var(--neon); }
+  .ladder { display: flex; gap: 6pt; margin: 6pt 0 12pt; align-items: flex-end; break-inside: avoid; }
+  .ladder div { flex: 1; background: var(--forest); color: #fff; border-radius: 8pt 8pt 3pt 3pt; padding: 6pt; font-size: 8pt; }
+  .ladder div b { display: block; color: var(--neon); font-family: Sora; font-size: 9.5pt; }
+  .phone { border-radius: 14pt; overflow: hidden; }
+  .two { display: grid; grid-template-columns: 1.25fr 1fr; gap: 14pt; align-items: start; }
+  .pill { display: inline-block; background: var(--neon); color: var(--deep); font-weight: 800; font-size: 7.6pt; padding: 1pt 7pt; border-radius: 999px; letter-spacing: .5pt; vertical-align: middle; }
+  .team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; }
+  .team .card .role { color: var(--lime); font-weight: 700; font-size: 8.6pt; }
+  .end { background: var(--deep); color: #e6efe2; }
+  .end h2, .end strong { color: var(--neon); }
+  .end .lead { color: #c4d3bf; }
+  .small { font-size: 8.4pt; color: var(--muted); }
+  .end .small { color: #8fa08a; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="page cover">
+  <div class="photo"></div><div class="shade"></div>
+  <div class="inner">
+    <div class="brand"><div class="mark">TS</div>TRAIL SEEK</div>
+    <div class="title">
+      <span class="tag">Official Project Report</span>
+      <h1>Every adventure.<br>One app. <span>No one left behind.</span></h1>
+      <div class="sub">A gamified, unified adventure platform for booking and experiencing treks, hikes and outdoor adventures, with live weather, team matching and Bluetooth group safety that works without a mobile network.</div>
+      <div class="meta">
+        <div><b>Version</b>1.0</div>
+        <div><b>Date</b>October 2026</div>
+        <div><b>Launch region</b>Kerala, India</div>
+        <div><b>Classification</b>Confidential</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTENTS ============ -->
+<section class="page">
+  <div class="kicker">Inside this report</div>
+  <h2>Contents</h2>
+  <div class="rule"></div>
+  <div class="toc">
+    <div class="row"><span class="n">01</span><span class="t">Executive Summary</span><span class="d">The idea in one page</span></div>
+    <div class="row"><span class="n">02</span><span class="t">The Problem</span><span class="d">Why adventure travel is hard today</span></div>
+    <div class="row"><span class="n">03</span><span class="t">Vision and Mission</span><span class="d">What Trail Seek stands for</span></div>
+    <div class="row"><span class="n">04</span><span class="t">The Platform</span><span class="d">One unified system, six pillars</span></div>
+    <div class="row"><span class="n">05</span><span class="t">Unified Booking and Live Availability</span><span class="d">Every adventure, one checkout</span></div>
+    <div class="row"><span class="n">06</span><span class="t">Team Up: Group Matching</span><span class="d">Solving minimum group sizes</span></div>
+    <div class="row"><span class="n">07</span><span class="t">Digital Rope: No One Gets Lost</span><span class="d">Bluetooth group safety, no network needed</span></div>
+    <div class="row"><span class="n">08</span><span class="t">Gamified Experience</span><span class="d">Levels, badges, avatars and progression</span></div>
+    <div class="row"><span class="n">09</span><span class="t">Live Weather and Trail Conditions</span><span class="d">Plan with confidence</span></div>
+    <div class="row"><span class="n">10</span><span class="t">Community and Explorer Profiles</span><span class="d">Adventure is social</span></div>
+    <div class="row"><span class="n">11</span><span class="t">The User Journey</span><span class="d">From idea to summit to story</span></div>
+    <div class="row"><span class="n">12</span><span class="t">Market Opportunity</span><span class="d">Size, growth and who we serve</span></div>
+    <div class="row"><span class="n">13</span><span class="t">Competitive Advantage</span><span class="d">What makes Trail Seek different</span></div>
+    <div class="row"><span class="n">14</span><span class="t">Business Model</span><span class="d">How the platform earns</span></div>
+    <div class="row"><span class="n">15</span><span class="t">Technology</span><span class="d">Built for the outdoors</span></div>
+    <div class="row"><span class="n">16</span><span class="t">Go-to-Market and Roadmap</span><span class="d">Kerala first, then beyond</span></div>
+    <div class="row"><span class="n">17</span><span class="t">Safety, Privacy and Responsibility</span><span class="d">Our commitments</span></div>
+    <div class="row"><span class="n">18</span><span class="t">Risks and Mitigation</span><span class="d">What we watch</span></div>
+    <div class="row"><span class="n">19</span><span class="t">Team</span><span class="d">The people behind Trail Seek</span></div>
+    <div class="row"><span class="n">20</span><span class="t">Conclusion</span><span class="d">Why now</span></div>
+  </div>
+</section>
+
+<!-- ============ 01 EXECUTIVE SUMMARY ============ -->
+<section class="page">
+  <div class="kicker">01 · Executive Summary</div>
+  <h2>The idea in one page</h2>
+  <div class="rule"></div>
+  <p class="lead"><strong>Trail Seek</strong> is a mobile adventure platform where people discover, book and safely enjoy treks, hikes and outdoor adventures, all in one place, and are rewarded for every journey they complete.</p>
+  <p>Today an adventurer has to search scattered sources for an activity, call to check whether a slot is free, find enough friends to meet a minimum group size, guess the weather, and then hope nobody gets separated on a trail with no mobile signal. Trail Seek replaces that whole chain with a single, unified system.</p>
+  <div class="grid3" style="margin:8pt 0 8pt">
+    <div class="card"><div class="ico">1</div><h4>Unified booking</h4><p>Treks, hikes, rafting, kayaking, coracle rides, cycling, camping, safaris and stays: one account, one checkout, one ticket.</p></div>
+    <div class="card"><div class="ico">2</div><h4>Live availability</h4><p>Real-time slots and capacity, instant confirmation and a QR ticket that works offline at the gate.</p></div>
+    <div class="card"><div class="ico">3</div><h4>Team Up</h4><p>Mark interest in a date and get matched with other adventurers to meet minimum group sizes. Nobody misses a trek for lack of company.</p></div>
+    <div class="card dark"><div class="ico">4</div><h4>Digital Rope</h4><p>Phone-to-phone Bluetooth links every member of a group with no mobile network. If someone falls behind, the group knows within seconds.</p></div>
+    <div class="card"><div class="ico">5</div><h4>Gamified progression</h4><p>XP, levels, badges, achievements and an avatar that grows with every adventure, so people come back.</p></div>
+    <div class="card"><div class="ico">6</div><h4>Live weather</h4><p>Forecasts and trail conditions for the exact place and time slot, with alerts before and during the trip.</p></div>
+  </div>
+  <div class="callout" style="margin:6pt 0"><p><strong>Two problems nobody else solves together:</strong> <strong>"I can't book, I don't have enough people"</strong> (Team Up) and <strong>"What if someone gets lost on the trail?"</strong> (Digital Rope).</p></div>
+  <h3>Where we start</h3>
+  <p>Trail Seek launches in <strong>Kerala</strong>, beginning with the forest eco-tourism programmes of <strong>Thrissur district</strong>: Athirappilly–Vazhachal, Peechi–Vazhani, Chimmony and Chulannur, which cover guided forest treks, coracle rides, cycling and nature stays. From there it expands across Kerala, then the Western Ghats and the rest of India.</p>
+  <div class="grid3" style="margin-top:8pt">
+    <div class="stat card soft" style="padding:7pt 10pt"><div class="v" style="font-size:16pt">USD 16.7 bn</div><div class="l">India adventure tourism, 2024</div></div>
+    <div class="stat card soft" style="padding:7pt 10pt"><div class="v" style="font-size:16pt">17.8%</div><div class="l">Forecast growth (CAGR), 2025–2033</div></div>
+    <div class="stat card soft" style="padding:7pt 10pt"><div class="v" style="font-size:16pt">2.29 crore</div><div class="l">Tourist visits to Kerala, 2024</div></div>
+  </div>
+</section>
+
+<!-- ============ 02 PROBLEM ============ -->
+<section class="page">
+  <div class="kicker">02 · The Problem</div>
+  <h2>Why adventure travel is hard today</h2>
+  <div class="rule"></div>
+  <p class="lead">Interest in outdoor adventure is growing fast, but the experience around it is fragmented, uncertain and, on the trail itself, sometimes unsafe.</p>
+  <div class="grid2">
+    <div class="card"><h4>Scattered discovery</h4><p>Activities are spread across operator pages, social media posts and word of mouth. Prices, timings and rules are hard to find and often out of date.</p></div>
+    <div class="card"><h4>No live availability</h4><p>Travellers cannot see free slots or capacity in real time. They call ahead, travel on a guess, or arrive to find a programme full or closed.</p></div>
+    <div class="card"><h4>Minimum group sizes block solo travellers</h4><p>Many guided treks run only for a minimum number of people. A forest trek at Vazhachal, for example, needs at least four. Someone with one friend, or travelling alone, simply cannot go.</p></div>
+    <div class="card"><h4>People get separated on trails</h4><p>Forest trails often have no mobile signal. When a member falls behind or takes a wrong turn, the group may not notice for a long time, and calling them is impossible.</p></div>
+    <div class="card"><h4>Weather surprises</h4><p>Rain, mist and heat change trail safety by the hour, especially in the monsoon. Generic forecasts are not tied to the trail, the slot or the activity.</p></div>
+    <div class="card"><h4>No reason to return</h4><p>A completed trek leaves nothing behind: no record, no progress, no recognition. Most adventurers do one trip a year and forget the platform they used.</p></div>
+  </div>
+  <div class="banner" style="background-image:url('../../assets/images/thrissur/vazhachal-rapids.jpg'); margin-top:14pt"><div class="cap">Forest trails are beautiful and remote. That's exactly why people need a better way to plan them and to stay together on them.</div></div>
+</section>
+
+<!-- ============ 03 VISION ============ -->
+<section class="page">
+  <div class="kicker">03 · Vision and Mission</div>
+  <h2>What Trail Seek stands for</h2>
+  <div class="rule"></div>
+  <div class="grid2" style="margin-bottom:14pt">
+    <div class="card dark"><h4>Vision</h4><p style="font-size:11pt;color:#e6efe2">To be the platform every adventurer opens first: the place where outdoor journeys are found, shared, completed safely and celebrated.</p></div>
+    <div class="card dark"><h4>Mission</h4><p style="font-size:11pt;color:#e6efe2">To make adventure easy to book, possible for anyone regardless of group size, safe even without a network, and rewarding enough to do again.</p></div>
+  </div>
+  <h3>Our principles</h3>
+  <table>
+    <tr><th style="width:28%">Principle</th><th>What it means in the product</th></tr>
+    <tr><td><strong>No one left behind</strong></td><td>Group safety is a core feature, not an add-on. Every group session can be linked by the Digital Rope.</td></tr>
+    <tr><td><strong>One system, every adventure</strong></td><td>One account, profile, wallet, ticket format and progress system across every activity type and operator.</td></tr>
+    <tr><td><strong>Honest information</strong></td><td>Real prices, real availability and real risks for every activity. No trail is presented as easier or safer than it is.</td></tr>
+    <tr><td><strong>Adventure for everyone</strong></td><td>Team Up opens group-only experiences to solo travellers, couples and small groups.</td></tr>
+    <tr><td><strong>Earned, not bought</strong></td><td>Levels, badges and avatar gear are unlocked by doing real adventures, safely.</td></tr>
+    <tr><td><strong>Respect for nature</strong></td><td>Capacity limits, permits and forest rules are built into booking; responsible behaviour is rewarded.</td></tr>
+  </table>
+  <div class="banner" style="background-image:url('../../assets/images/thrissur/commons-ezhattumugham.jpg')"><div class="cap">Find it. Book it. Go together. Come back stronger.</div></div>
+</section>
+
+<!-- ============ 04 PLATFORM ============ -->
+<section class="page">
+  <div class="kicker">04 · The Platform</div>
+  <h2>One unified system, six pillars</h2>
+  <div class="rule"></div>
+  <p class="lead">Trail Seek is not a booking site with extras. It is one connected system: what you book, who you go with, how you stay safe and what you achieve all feed into each other.</p>
+  <table>
+    <tr><th style="width:24%">Pillar</th><th style="width:42%">What it does</th><th>How it connects</th></tr>
+    <tr><td><strong>Unified Booking</strong></td><td>Every adventure type in one catalogue with one checkout and one QR ticket.</td><td>A booking creates the group, the weather watch and the XP opportunity.</td></tr>
+    <tr><td><strong>Live Availability</strong></td><td>Real-time slots, capacity and closures.</td><td>Feeds Team Up so open seats can be filled by matched adventurers.</td></tr>
+    <tr><td><strong>Team Up</strong></td><td>Interest pools per activity and date; matching to meet minimum group sizes.</td><td>A completed team becomes a booked group with a Digital Rope session.</td></tr>
+    <tr><td><strong>Digital Rope</strong></td><td>Bluetooth group link with alerts, SOS and live positions, no network required.</td><td>Safe completion earns XP and badges; incidents inform trail safety data.</td></tr>
+    <tr><td><strong>Gamification</strong></td><td>XP, levels, badges, achievements, avatar progression and leaderboards.</td><td>Rewards bookings, completion, safety and community. Drives repeat use.</td></tr>
+    <tr><td><strong>Live Weather</strong></td><td>Slot-level forecasts, trail conditions and alerts.</td><td>Shapes booking advice, reminders and on-trail warnings.</td></tr>
+  </table>
+  <div class="callout"><p><strong>One identity across everything.</strong> An explorer has one profile that holds their bookings, tickets, teams, trek history, level, badges and avatar. The same profile works for a coracle ride at Peechi and a peak trek in the Western Ghats.</p></div>
+  <h3>Adventure categories at launch and next</h3>
+  <div class="grid3">
+    <div class="card soft"><h4>Trail</h4><p>Guided forest treks, day hikes, ridge walks, peak climbs, night treks, birding walks</p></div>
+    <div class="card soft"><h4>Water</h4><p>Coracle rides, kayaking, rafting, bamboo rafting, waterfall visits</p></div>
+    <div class="card soft"><h4>Wild and stay</h4><p>Wildlife safaris, cycling trails, camping, tree houses, forest stays</p></div>
+  </div>
+</section>
+
+<!-- ============ 05 BOOKING ============ -->
+<section class="page">
+  <div class="kicker">05 · Unified Booking and Live Availability</div>
+  <h2>Every adventure, one checkout</h2>
+  <div class="rule"></div>
+  <div class="banner" style="background-image:url('../../assets/images/thrissur/peechi-coracle-blue.jpg')"><div class="cap">Coracle rides, forest treks and stays: booked the same way, in under two minutes.</div></div>
+  <div class="flow">
+    <div class="step"><div class="k">01</div><b>Discover</b><span>Browse by state, district, destination or activity type; filter by difficulty, price and duration.</span></div>
+    <div class="step"><div class="k">02</div><b>Check slots</b><span>A live calendar shows open dates, time slots and remaining capacity.</span></div>
+    <div class="step"><div class="k">03</div><b>Build the party</b><span>Adults, children, students and add-ons like parking or camera, with a live total.</span></div>
+    <div class="step"><div class="k">04</div><b>Pay</b><span>UPI, cards or net banking, with clear cancellation rules shown before payment.</span></div>
+    <div class="step"><div class="k">05</div><b>Ticket</b><span>Instant QR ticket and short code, stored offline for the gate.</span></div>
+  </div>
+  <div class="two">
+    <div>
+      <h3>What every activity page carries</h3>
+      <ul>
+        <li><strong>Exact pricing:</strong> package or per-person rates, extra-person charges, entry, parking and camera fees.</li>
+        <li><strong>Timings and slots:</strong> reporting time, duration, group limits and minimum group size.</li>
+        <li><strong>Preparation:</strong> how to reach, terrain, best season, gear list and a pre-trip checklist.</li>
+        <li><strong>Safety:</strong> risks, dangerous sections, wildlife notes and emergency numbers for that place.</li>
+        <li><strong>Navigation:</strong> map, directions and offline map download.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Live, not static</h3>
+      <ul>
+        <li>Capacity updates in real time as seats are booked, so slots never oversell.</li>
+        <li>Closures, for weather, wildlife or maintenance, show immediately and trigger automatic rescheduling or refunds.</li>
+        <li>"Next trip" reminders, the ticket and the weather for that slot appear on the home screen.</li>
+        <li>Operators maintain rates, slots and capacity from their own side.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 TEAM UP ============ -->
+<section class="page">
+  <div class="kicker">06 · Team Up <span class="pill">CORE FEATURE</span></div>
+  <h2>Never miss a trek for lack of company</h2>
+  <div class="rule"></div>
+  <p class="lead" style="margin-bottom:10pt">Many guided programmes run only for a minimum group size. Team Up lets anyone mark interest in an activity on a date, and fills the remaining places with other adventurers who want the same trip.</p>
+  <div class="two">
+    <div>
+      <div class="callout" style="margin-top:0"><p><strong>Example: a Vazhachal forest trek, minimum four people.</strong> Anu wants to go on Saturday but is on her own. She opens the trek, picks Saturday and taps <strong>"I'm interested"</strong>. Three other adventurers see an open Saturday team, <strong>1 of 4</strong>, and join. When the fourth person joins, the team is complete: everyone is confirmed and booked together, and the group is ready on the day.</p></div>
+      <h3>How it works</h3>
+      <ul>
+        <li><strong>Interest pools:</strong> every activity and date has a visible pool showing how many people have joined and how many are still needed.</li>
+        <li><strong>Seat hold:</strong> joining holds a place; payment is taken only when the team reaches the minimum.</li>
+        <li><strong>Cut-off:</strong> if the team isn't full by its deadline, nobody is charged and members are offered the nearest filling date.</li>
+        <li><strong>Smart nudges:</strong> people who saved the activity or live nearby are told when a team is nearly full.</li>
+      </ul>
+    </div>
+    <div class="banner phone" style="height:auto; min-height:66mm; background-image:url('../../assets/images/thrissur/vazhachal-group.jpg'); background-size:auto 150%; background-position:center 80%; margin:0"><div class="cap">Strangers in the morning, a team by the trailhead.</div></div>
+  </div>
+  <div class="flow">
+    <div class="step"><div class="k">01</div><b>Mark interest</b><span>Pick the activity and date; your place is held.</span></div>
+    <div class="step"><div class="k">02</div><b>Team is visible</b><span>Others see "1 of 4" on that date and join.</span></div>
+    <div class="step"><div class="k">03</div><b>Minimum reached</b><span>Every member is charged and confirmed together.</span></div>
+    <div class="step"><div class="k">04</div><b>Meet the team</b><span>Profiles, levels and a team chat unlock before the day.</span></div>
+    <div class="step"><div class="k">05</div><b>Go together</b><span>The team becomes a Digital Rope group on the trail.</span></div>
+  </div>
+  <h3>Trust and safety in teams</h3>
+  <p style="margin:0">Verified profiles, levels and ratings are visible before the day. Teams can be <strong>women-only</strong> or <strong>beginner-friendly</strong>, guides lead every guided programme, and anyone can report or block. Phone numbers are never shared.</p>
+</section>
+
+<!-- ============ 07 DIGITAL ROPE ============ -->
+<section class="page">
+  <div class="kicker">07 · Digital Rope <span class="pill">CORE FEATURE</span></div>
+  <h2>No one gets lost on the trail</h2>
+  <div class="rule"></div>
+  <p class="lead">The Digital Rope links every phone in a group over Bluetooth Low Energy. It needs no mobile signal, no internet and no pairing, and it works between Android phones and iPhones.</p>
+  <div class="grid2">
+    <div class="card"><h4>Always connected</h4><p>Each phone sends a small heartbeat every couple of seconds and listens for everyone else's. Members also relay what they hear, so the link reaches people beyond direct range.</p></div>
+    <div class="card"><h4>Live positions and paths</h4><p>Phones share GPS positions with each other over Bluetooth. Every member sees the group on a satellite map with each person's path and live distance, even without signal.</p></div>
+    <div class="card"><h4>Start and end together</h4><p>Only the organizer starts and ends a session. Members can ask to start; when the organizer accepts, every phone counts down and starts at the same moment.</p></div>
+    <div class="card"><h4>One-tap messages</h4><p>"I'm OK", "Wait for me" and "Need help" reach every phone in range instantly, with no network.</p></div>
+  </div>
+  <h3>How separation is detected</h3>
+  <div class="states">
+    <div style="background:#2f9e44"><b>Connected</b>Heard within seconds</div>
+    <div style="background:#74b816"><b>Weak</b>Signal fading</div>
+    <div style="background:#f2a900"><b>Falling behind</b>About 20 s quiet</div>
+    <div style="background:#f76707"><b>Separated</b>About 60 s quiet</div>
+    <div style="background:#e5484d"><b>Critical</b>About 3 min, no reconnection</div>
+  </div>
+  <div class="two">
+    <div>
+      <h3>When someone is missing</h3>
+      <ul>
+        <li>The organizer and the group get an <strong>alarm, with sound and strong vibration</strong>, that repeats until someone responds. It's not just a quiet notification.</li>
+        <li>The member's <strong>last known position</strong> and path are shown on the map so the group can turn back to the right place.</li>
+        <li>The member who has fallen behind is warned too: "Your group is moving away".</li>
+        <li>An SOS from any member reaches every phone in range and can be passed along by other phones.</li>
+      </ul>
+    </div>
+    <div class="card dark">
+      <h4>Why it matters</h4>
+      <p>Forest trails are where mobile networks fail and where people most often get separated. Calling a lost member is impossible there. The Digital Rope works exactly where calls don't, turning "we noticed an hour later" into "we noticed in under a minute".</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 08 GAMIFICATION ============ -->
+<section class="page">
+  <div class="kicker">08 · Gamified Experience</div>
+  <h2>Every adventure levels you up</h2>
+  <div class="rule"></div>
+  <p class="lead">Trail Seek turns outdoor life into a game worth playing: each completed adventure earns experience, unlocks badges and grows the explorer's own character.</p>
+  <div class="avatars">
+    <img src="../../assets/images/characters/arav.jpg"><img src="../../assets/images/characters/meera.jpg"><img src="../../assets/images/characters/joseph.jpg"><img src="../../assets/images/characters/ananya.jpg"><img src="../../assets/images/characters/kiran.jpg"><img src="../../assets/images/characters/nila.jpg">
+  </div>
+  <p class="small">Explorer avatars. Every user picks a trekker character and grows it as they progress.</p>
+  <div class="grid2">
+    <div>
+      <h3>What earns XP</h3>
+      <ul>
+        <li>Completing a booked adventure, scaled by distance, elevation gain and difficulty.</li>
+        <li>Finishing as a group with no separations: a <strong>safe-team bonus</strong>.</li>
+        <li>Firsts: first trek, first water activity, first new district, first peak above 1,500 m.</li>
+        <li>Streaks and seasonal quests (for example a "Monsoon Falls" trail series).</li>
+        <li>Helping others: filling a Team Up spot, posting trail reports, good team ratings.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What it unlocks</h3>
+      <ul>
+        <li><strong>Levels</strong> with titles that show experience at a glance.</li>
+        <li><strong>Badges</strong> such as Peak Hunter, Forest Ranger, River Explorer and Group Leader.</li>
+        <li><strong>Achievements</strong> for longest trek, highest altitude and total distance.</li>
+        <li><strong>Character sheet:</strong> an archetype and skill levels in trekking, hiking, water and cycling.</li>
+        <li><strong>Leaderboards</strong> by district, state and friends, plus rank on Top Explorers.</li>
+        <li>Partner perks: discounts and early access to new trails for higher levels.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="ladder">
+    <div style="height:30pt"><b>Lv 1–5</b>Trail Rookie</div>
+    <div style="height:40pt"><b>Lv 6–14</b>Pathfinder</div>
+    <div style="height:50pt"><b>Lv 15–24</b>Summit Keeper</div>
+    <div style="height:60pt"><b>Lv 25–39</b>Ridge Master</div>
+    <div style="height:70pt"><b>Lv 40+</b>Legend of the Ghats</div>
+  </div>
+  <div class="callout"><p><strong>Why gamification here works:</strong> adventure already has natural achievements, like distance, altitude, new places and teamwork. Trail Seek records them automatically and makes them visible, so one trip a year becomes a progression people want to continue.</p></div>
+</section>
+
+<!-- ============ 09 WEATHER ============ -->
+<section class="page">
+  <div class="kicker">09 · Live Weather and Trail Conditions</div>
+  <h2>Plan with confidence</h2>
+  <div class="rule"></div>
+  <div class="banner" style="background-image:url('../../assets/images/thrissur/peechi-sunset.jpg')"><div class="cap">The right trail, on the right day, at the right hour.</div></div>
+  <div class="grid2">
+    <div class="card"><h4>Slot-level forecast</h4><p>Temperature, rain probability, wind and visibility for the exact destination and time slot, not just the nearest city.</p></div>
+    <div class="card"><h4>Alerts before you go</h4><p>Heavy rain, thunderstorm or heat warnings for your booked date, pushed 48 hours, 24 hours and on the morning of the trip.</p></div>
+    <div class="card"><h4>Closures and rescheduling</h4><p>If an activity is closed for weather, the booking is moved or refunded automatically and the team is told at once.</p></div>
+    <div class="card"><h4>Best time to go</h4><p>Season guidance and "best days this week" suggestions on every activity page, plus monsoon-only experiences such as waterfall trails.</p></div>
+    <div class="card"><h4>On-trail warnings</h4><p>During a session, worsening conditions are shown to the whole group. With no signal, the last forecast is kept on the phone.</p></div>
+    <div class="card"><h4>Trail reports</h4><p>Recent explorers post conditions such as leeches, slippery rocks or high water, which earns them XP and keeps the next group informed.</p></div>
+  </div>
+</section>
+
+<!-- ============ 10 COMMUNITY ============ -->
+<section class="page">
+  <div class="kicker">10 · Community and Explorer Profiles</div>
+  <h2>Adventure is social</h2>
+  <div class="rule"></div>
+  <p class="lead">Trail Seek's community turns individual trips into shared stories and new teams.</p>
+  <div class="grid3">
+    <div class="card"><h4>Feed</h4><p>Photos and stories from completed adventures, with likes and comments; filter by All, Following or Nearby.</p></div>
+    <div class="card"><h4>Explorer profiles</h4><p>Avatar, level, badges, archetype, skills, records and full adventure history in one public character sheet.</p></div>
+    <div class="card"><h4>Follow and discover</h4><p>Follow explorers, see what they book, and join their open Team Up teams.</p></div>
+    <div class="card"><h4>Top Explorers</h4><p>Leaderboards by XP and rank that celebrate the most active and safest adventurers.</p></div>
+    <div class="card"><h4>Groups</h4><p>Create a group for a trip, invite by code or QR, and run it as a Digital Rope session on the day.</p></div>
+    <div class="card"><h4>Moderation</h4><p>Reporting, blocking and content review keep the community welcoming and safe.</p></div>
+  </div>
+  <div class="banner" style="background-image:url('../../assets/images/thrissur/chulannur-trekkers.jpg'); margin-top:14pt"><div class="cap">Every finished adventure is a story, and every story brings in the next explorer.</div></div>
+</section>
+
+<!-- ============ 11 JOURNEY ============ -->
+<section class="page">
+  <div class="kicker">11 · The User Journey</div>
+  <h2>From idea to summit to story</h2>
+  <div class="rule"></div>
+  <table>
+    <tr><th style="width:16%">Stage</th><th style="width:44%">What the explorer does</th><th>What Trail Seek does</th></tr>
+    <tr><td><strong>Inspire</strong></td><td>Scrolls the feed, sees a friend's waterfall trek.</td><td>Shows the same trek, its price, the next open dates and any open team.</td></tr>
+    <tr><td><strong>Plan</strong></td><td>Picks a date and checks the weather.</td><td>Live slots, slot-level forecast and best-day suggestions.</td></tr>
+    <tr><td><strong>Team Up</strong></td><td>Has only one friend; minimum is four. Marks interest.</td><td>Opens a team on that date and fills it with matched explorers.</td></tr>
+    <tr><td><strong>Book</strong></td><td>Pays once the team is complete.</td><td>Confirms everyone together; issues offline QR tickets.</td></tr>
+    <tr><td><strong>Prepare</strong></td><td>Reads the gear list and meets the team.</td><td>Checklist, weather alerts, offline maps and team chat.</td></tr>
+    <tr><td><strong>Go</strong></td><td>Starts the trek with the group.</td><td>Digital Rope links every phone; live map, paths and alarms if anyone drifts.</td></tr>
+    <tr><td><strong>Celebrate</strong></td><td>Finishes and shares a photo.</td><td>Records the trek, awards XP, badges and avatar progress, and posts to the feed.</td></tr>
+    <tr><td><strong>Return</strong></td><td>Sees a quest one step from the next level.</td><td>Suggests the next adventure and an open team for it.</td></tr>
+  </table>
+  <div class="callout"><p><strong>The loop:</strong> inspiration leads to booking, booking to a safe group adventure, the adventure to rewards and a story, and the story inspires the next explorer. Every feature feeds the next.</p></div>
+</section>
+
+<!-- ============ 12 MARKET ============ -->
+<section class="page">
+  <div class="kicker">12 · Market Opportunity</div>
+  <h2>A large market, growing fast</h2>
+  <div class="rule"></div>
+  <div class="grid3" style="margin-bottom:12pt">
+    <div class="stat card soft"><div class="v">USD 16.7 bn</div><div class="l">India adventure tourism market in 2024 <sup>[1]</sup></div></div>
+    <div class="stat card soft"><div class="v">USD 86.1 bn</div><div class="l">Forecast for 2033, a 17.8% CAGR <sup>[1]</sup></div></div>
+    <div class="stat card soft"><div class="v">USD 476 bn</div><div class="l">Global adventure tourism, 2024 <sup>[2]</sup></div></div>
+    <div class="stat card soft"><div class="v">2.22 crore</div><div class="l">Domestic tourist visits to Kerala, 2024 <sup>[3]</sup></div></div>
+    <div class="stat card soft"><div class="v">7.38 lakh</div><div class="l">Foreign tourist visits to Kerala, 2024 (+13.8%) <sup>[3]</sup></div></div>
+    <div class="stat card soft"><div class="v">₹45,054 cr</div><div class="l">Kerala tourism revenue, 2024 <sup>[3]</sup></div></div>
+  </div>
+  <h3>Who we serve</h3>
+  <table>
+    <tr><th style="width:26%">Segment</th><th style="width:42%">Need</th><th>Trail Seek answer</th></tr>
+    <tr><td><strong>Students and young professionals</strong></td><td>Affordable weekend adventures; often short of a full group.</td><td>Team Up, levels and leaderboards, community.</td></tr>
+    <tr><td><strong>Solo travellers and couples</strong></td><td>Access to group-only programmes; safety with strangers.</td><td>Team Up with verified profiles and Digital Rope.</td></tr>
+    <tr><td><strong>Families</strong></td><td>Easy, safe, well-informed outings.</td><td>Clear pricing, difficulty, weather and group safety.</td></tr>
+    <tr><td><strong>Clubs, colleges and companies</strong></td><td>Large group bookings and coordination.</td><td>Group booking, roster and Digital Rope for big groups.</td></tr>
+    <tr><td><strong>Visitors from other states and abroad</strong></td><td>Trustworthy local information in one place.</td><td>Unified catalogue, honest content and offline tickets.</td></tr>
+    <tr><td><strong>Operators and destinations</strong></td><td>Fuller slots, fewer no-shows, safer groups.</td><td>Live capacity, Team Up demand and safety reporting.</td></tr>
+  </table>
+  <p class="small">[1] IMARC Group, India Adventure Tourism Market report. [2] IMARC Group, Global Adventure Tourism Market report. [3] Kerala Tourism, Tourist Statistics 2024. Market forecasts are third-party estimates.</p>
+</section>
+
+<!-- ============ 13 COMPETITION ============ -->
+<section class="page">
+  <div class="kicker">13 · Competitive Advantage</div>
+  <h2>What makes Trail Seek different</h2>
+  <div class="rule"></div>
+  <p class="lead">Others solve one piece: booking, maps or social. Trail Seek is the only platform that brings booking, group formation, offline group safety and progression into one system.</p>
+  <table>
+    <tr><th style="width:30%">Capability</th><th>General travel booking apps</th><th>Trek operator pages</th><th>Maps and fitness apps</th><th>Chat groups</th><th>Trail Seek</th></tr>
+    <tr><td>All adventure types, one checkout</td><td class="part">Partial</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Live slots and capacity</td><td class="part">Partial</td><td class="part">Partial</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Match strangers to meet minimum group size</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="part">Informal</td><td class="yes">Yes</td></tr>
+    <tr><td>Group safety with no mobile network</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Live group map and paths offline</td><td class="no">No</td><td class="no">No</td><td class="part">Solo only</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Levels, badges, avatar progression</td><td class="no">No</td><td class="no">No</td><td class="part">Fitness only</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Slot-level weather and closures</td><td class="no">No</td><td class="part">Partial</td><td class="part">General</td><td class="no">No</td><td class="yes">Yes</td></tr>
+    <tr><td>Community tied to real trips</td><td class="no">No</td><td class="no">No</td><td class="part">Partial</td><td class="part">Partial</td><td class="yes">Yes</td></tr>
+  </table>
+  <h3>Defensible strengths</h3>
+  <ul>
+    <li><strong>Network effects:</strong> every new explorer makes Team Up fill faster and the Digital Rope relay stronger.</li>
+    <li><strong>Hard technology:</strong> reliable cross-platform Bluetooth group safety took real engineering and field testing to build.</li>
+    <li><strong>Data that compounds:</strong> trail conditions, completion times and safety events make the platform smarter every season.</li>
+    <li><strong>Local depth:</strong> curated, verified content and partnerships destination by destination, starting in Kerala.</li>
+  </ul>
+</section>
+
+<!-- ============ 14 BUSINESS MODEL ============ -->
+<section class="page">
+  <div class="kicker">14 · Business Model</div>
+  <h2>How the platform earns</h2>
+  <div class="rule"></div>
+  <div class="grid2">
+    <div class="card"><div class="ico">₹</div><h4>Booking commission</h4><p>A percentage of each booking paid by the operator, plus a small convenience fee per ticket. This is the primary revenue line.</p></div>
+    <div class="card"><div class="ico">+</div><h4>Trail Seek Pro</h4><p>Optional membership: offline maps for whole regions, extended Digital Rope features, priority Team Up, member discounts and trip insurance.</p></div>
+    <div class="card"><div class="ico">◎</div><h4>Partner promotions</h4><p>Featured placement for operators, stays and new destinations, clearly labelled and never mixed into safety information.</p></div>
+    <div class="card"><div class="ico">⌂</div><h4>Groups and institutions</h4><p>Packages for colleges, clubs and companies: bulk bookings, managed teams and Digital Rope for large groups.</p></div>
+    <div class="card"><div class="ico">✦</div><h4>Gear and services</h4><p>Commissions on gear rental, guides, transport and insurance offered at the point of booking.</p></div>
+    <div class="card"><div class="ico">▤</div><h4>Insights for destinations</h4><p>Aggregated, anonymised visitor and safety reports for destinations and authorities that want to plan capacity and safety.</p></div>
+  </div>
+  <div class="callout"><p><strong>The loop drives the economics:</strong> gamification brings users back cheaply, Team Up turns lost demand into bookings, and the Digital Rope earns the trust of families and first-timers.</p></div>
+  <h3>Key metrics we track</h3>
+  <table>
+    <tr><th>Metric</th><th>Why it matters</th></tr>
+    <tr><td>Bookings and gross booking value</td><td>Core revenue driver</td></tr>
+    <tr><td>Team Up fill rate and time to fill</td><td>Proof that matching unlocks new demand</td></tr>
+    <tr><td>Repeat adventurers within 90 days</td><td>Shows whether gamification is working</td></tr>
+    <tr><td>Digital Rope sessions; time to detect a separation; reconnection time</td><td>Safety performance and trust</td></tr>
+    <tr><td>Ratings per activity and per team</td><td>Quality and community health</td></tr>
+  </table>
+</section>
+
+<!-- ============ 15 TECHNOLOGY ============ -->
+<section class="page">
+  <div class="kicker">15 · Technology</div>
+  <h2>Built for the outdoors</h2>
+  <div class="rule"></div>
+  <p class="lead">Trail Seek is built to work where adventure happens: in forests, on rivers and on ridges, often with no network at all.</p>
+  <div class="grid2">
+    <div class="card"><h4>One app for Android and iPhone</h4><p>A single cross-platform codebase delivers the same experience on both, with native Bluetooth, GPS and notifications.</p></div>
+    <div class="card"><h4>Offline-first</h4><p>Activity details, tickets, maps, tracking and the Digital Rope all work without a connection, and sync when one returns.</p></div>
+    <div class="card"><h4>Secure cloud platform</h4><p>Managed authentication, a relational database with per-record access rules, encrypted storage and real-time updates.</p></div>
+    <div class="card"><h4>Bluetooth group mesh</h4><p>Low-energy advertising for heartbeats plus short data exchanges for the member list, positions and start and end signals. No pairing, Android and iOS together.</p></div>
+    <div class="card"><h4>Location and tracking</h4><p>Battery-aware GPS recording of distance, elevation and path, with a foreground service so tracking continues with the screen off.</p></div>
+    <div class="card"><h4>Live data</h4><p>Real-time availability and weather feeds, operator integrations through secure APIs, and alarm-grade notifications for safety events.</p></div>
+  </div>
+  <h3>Engineering quality</h3>
+  <ul>
+    <li>Automated test suite covering booking, pricing, progression rules, group sync and the Bluetooth data formats.</li>
+    <li>Safety thresholds can be tuned from configuration and are calibrated with field tests.</li>
+    <li>Security review and QA built into every release; privacy by design.</li>
+  </ul>
+</section>
+
+<!-- ============ 16 GTM + ROADMAP ============ -->
+<section class="page">
+  <div class="kicker">16 · Go-to-Market and Roadmap</div>
+  <h2>Kerala first, then beyond</h2>
+  <div class="rule"></div>
+  <h3>Launch: Thrissur district</h3>
+  <p>Trail Seek launches with the forest eco-tourism programmes of Thrissur district at <strong>Athirappilly–Vazhachal, Peechi–Vazhani, Chimmony and Chulannur</strong>. These include guided forest treks, coracle rides, cycling, waterfall visits and nature stays, 22 programmes in all, many of which need a minimum group size. That makes them an ideal first home for Team Up and the Digital Rope.</p>
+  <table>
+    <tr><th style="width:18%">Phase</th><th style="width:22%">Scope</th><th>Focus</th></tr>
+    <tr><td><strong>Phase 1</strong><br>Pilot</td><td>Thrissur district</td><td>Closed pilot with invited explorers and guides; Digital Rope field calibration; live payments; booking confirmation flow with destinations.</td></tr>
+    <tr><td><strong>Phase 2</strong><br>Kerala</td><td>Idukki, Wayanad, Munnar, Palakkad and more</td><td>Public launch on Android and iOS; Team Up at scale; Malayalam; weather alerts; operator dashboard.</td></tr>
+    <tr><td><strong>Phase 3</strong><br>Western Ghats</td><td>Tamil Nadu, Karnataka, Goa</td><td>Operator network; Pro membership; institutional packages; trail reports.</td></tr>
+    <tr><td><strong>Phase 4</strong><br>India</td><td>Himalaya and national circuits</td><td>Multi-day expeditions; insurance and gear partners; national leaderboards and seasonal quests.</td></tr>
+  </table>
+  <h3>Growth channels</h3>
+  <div class="grid3">
+    <div class="card soft"><h4>Campus and clubs</h4><p>Adventure clubs, NSS and NCC units, and college fests, with team leaderboards.</p></div>
+    <div class="card soft"><h4>Creators and guides</h4><p>Trek leaders and outdoor creators sharing trips and Team Up links.</p></div>
+    <div class="card soft"><h4>Built-in virality</h4><p>Every open team, badge and finished trek is shareable and brings in new explorers.</p></div>
+  </div>
+  <h3>Milestones</h3>
+  <table>
+    <tr><th>When</th><th>Milestone</th></tr>
+    <tr><td>Nov 2026</td><td>Thrissur closed pilot; content review with destinations; payment sandbox</td></tr>
+    <tr><td>Dec 2026</td><td>Live payments; booking confirmation integration; Malayalam</td></tr>
+    <tr><td>Jan 2027</td><td>Public beta on Play Store and App Store; Team Up public; weather alerts</td></tr>
+    <tr><td>Feb 2027</td><td>Operator dashboard; more Thrissur attractions; first seasonal quest</td></tr>
+    <tr><td>Mar 2027</td><td>Public launch for the season; expansion to the next Kerala districts</td></tr>
+  </table>
+</section>
+
+<!-- ============ 17 SAFETY ============ -->
+<section class="page">
+  <div class="kicker">17 · Safety, Privacy and Responsibility</div>
+  <h2>Our commitments</h2>
+  <div class="rule"></div>
+  <div class="grid2">
+    <div class="card"><h4>Honest safety information</h4><p>Risks, dangerous sections, wildlife notes and emergency contacts are required fields on every activity. No trail is presented as safer than it is.</p></div>
+    <div class="card"><h4>Location stays in the group</h4><p>Positions are shared only between members of the same active group, and only during the session. They are never sold or shown publicly.</p></div>
+    <div class="card"><h4>Safe teams</h4><p>Verified profiles, ratings, women-only and beginner-friendly teams, in-app messaging without sharing phone numbers, reporting and blocking.</p></div>
+    <div class="card"><h4>Guides and rules first</h4><p>Guided programmes are always led by authorised guides. Trail Seek supports them and never replaces them. Permits and capacity limits are built into booking.</p></div>
+    <div class="card"><h4>Data protection</h4><p>Encryption in transit and at rest, per-record access rules, minimal data collection, account deletion in the app, and a published privacy policy.</p></div>
+    <div class="card"><h4>Respect for nature</h4><p>Leave-no-trace guidance, rewards for responsible behaviour, and capacity limits that protect sensitive forest areas.</p></div>
+  </div>
+  <div class="callout"><p><strong>The Digital Rope is a safety aid, not a guarantee.</strong> It is designed to detect separation early and help a group regroup, alongside guides, briefings and good judgement.</p></div>
+</section>
+
+<!-- ============ 18 RISKS ============ -->
+<section class="page">
+  <div class="kicker">18 · Risks and Mitigation</div>
+  <h2>What we watch</h2>
+  <div class="rule"></div>
+  <table>
+    <tr><th style="width:32%">Risk</th><th>Mitigation</th></tr>
+    <tr><td><strong>Bluetooth behaviour varies by phone model</strong></td><td>Testing across devices, configurable thresholds, field calibration in the pilot, and relaying between members to extend range.</td></tr>
+    <tr><td><strong>iPhone background limits</strong></td><td>A data-exchange path that keeps working in the background; guidance to keep the app open during sessions; locked-screen field tests.</td></tr>
+    <tr><td><strong>Team Up teams don't fill</strong></td><td>Cut-off rules with no charge if a team doesn't fill, nudges to interested users, and suggestions for the nearest filling date.</td></tr>
+    <tr><td><strong>Safety of meeting strangers</strong></td><td>Verified profiles, ratings, women-only teams, guided programmes, in-app chat and quick reporting.</td></tr>
+    <tr><td><strong>Prices or rules change at the source</strong></td><td>Live operator integrations; scheduled data refresh; clear "last updated" stamps.</td></tr>
+    <tr><td><strong>Overbooking a slot</strong></td><td>Real-time capacity with seat holds during payment; reconciliation with destinations.</td></tr>
+    <tr><td><strong>Seasonal demand (monsoon)</strong></td><td>Monsoon-specific experiences, weather-led rescheduling, and expansion to regions with different seasons.</td></tr>
+    <tr><td><strong>Payment disputes</strong></td><td>Licensed payment gateway, automatic refunds, and cancellation rules shown before payment.</td></tr>
+  </table>
+</section>
+
+<!-- ============ 19 TEAM ============ -->
+<section class="page">
+  <div class="kicker">19 · Team</div>
+  <h2>The people behind Trail Seek</h2>
+  <div class="rule"></div>
+  <div class="team">
+    <div class="card"><h4>Shad</h4><div class="role">Founder · Product, Engineering and Security</div><p style="margin-top:5pt">Leads product vision and builds the platform, including the Digital Rope and the gamification engine.</p></div>
+    <div class="card"><h4>Amalu</h4><div class="role">Quality Assurance and Cybersecurity</div><p style="margin-top:5pt">Owns testing, release quality and security reviews across the app and cloud platform.</p></div>
+    <div class="card"><h4>Ashna</h4><div class="role">Content and Location Research</div><p style="margin-top:5pt">Researches destinations, programmes, safety notes and partnerships, and keeps every activity accurate.</p></div>
+  </div>
+  <h3>What we are looking for</h3>
+  <ul>
+    <li><strong>Destination partners</strong> to bring their programmes, slots and capacity onto the platform.</li>
+    <li><strong>Pilot support</strong> from guides and destinations for the Thrissur launch and Digital Rope field tests.</li>
+    <li><strong>Payment and insurance partners</strong> for live bookings and trip cover.</li>
+    <li><strong>Investment and mentorship</strong> to scale from Kerala across the Western Ghats.</li>
+  </ul>
+</section>
+
+<!-- ============ 20 CONCLUSION ============ -->
+<section class="page end">
+  <div class="kicker">20 · Conclusion</div>
+  <h2>Why now</h2>
+  <div class="rule"></div>
+  <p class="lead">Adventure tourism is one of the fastest-growing parts of travel, and Kerala is one of India's most-visited states. Yet the people who want these experiences still struggle to find them, to fill a group, and to stay together once they are out there.</p>
+  <div class="grid2" style="margin:12pt 0 16pt">
+    <div class="card dark" style="background:#0d2414;border-color:#1c3a24"><h4>Team Up</h4><p>Turns "we don't have enough people" into a booked team.</p></div>
+    <div class="card dark" style="background:#0d2414;border-color:#1c3a24"><h4>Digital Rope</h4><p>Turns "someone is missing" into "we found them in a minute".</p></div>
+    <div class="card dark" style="background:#0d2414;border-color:#1c3a24"><h4>Gamified, unified system</h4><p>Turns one trip a year into a journey people keep coming back to.</p></div>
+    <div class="card dark" style="background:#0d2414;border-color:#1c3a24"><h4>Live booking and weather</h4><p>Turns guesswork into confident plans.</p></div>
+  </div>
+  <p style="font-size:13pt; font-family:Sora; color:#fff; margin-top:10pt">Trail Seek: every adventure, one app, and no one left behind.</p>
+  <div style="margin-top:30mm" class="brand"><div class="mark">TS</div>TRAIL SEEK</div>
+  <p class="small" style="margin-top:8pt">This report describes the Trail Seek platform and its planned roadmap. Market figures are third-party estimates cited in Section 12. © 2026 Trail Seek. Confidential.</p>
+</section>
+
+</body>
+</html>

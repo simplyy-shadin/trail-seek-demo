@@ -1,0 +1,47 @@
+# Codemagic builds the iPhone app on a hosted Mac (free tier: ~500 macOS minutes a month).
+# Workflow "ios-unsigned" makes Trail Seek .ipa without an Apple developer account; SideStore,
+# xtool or Sideloadly sign it with a free Apple ID when installing.
+
+workflows:
+  ios-unsigned:
+    name: iOS unsigned IPA (sideload)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events: []
+
+    scripts:
+      - name: Clean and get packages
+        script: |
+          flutter clean
+          flutter pub get
+
+      - name: Tests
+        script: flutter test
+
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: Build unsigned app
+        script: flutter build ios --release --no-codesign
+
+      - name: Pack IPA
+        script: |
+          mkdir -p build/ios/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qr trailseek-unsigned.ipa Payload
+          ls -la
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
