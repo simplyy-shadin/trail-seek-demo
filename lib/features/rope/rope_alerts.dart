@@ -12,6 +12,9 @@ class RopeAlerts {
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
+  final Map<String, RopeState> _lastState = {};
+  final Map<String, DateTime> _lastAt = {};
+  static const _duplicateCooldown = Duration(seconds: 45);
 
   static const _channel = AndroidNotificationChannel(
     'rope_alerts',
@@ -69,19 +72,30 @@ class RopeAlerts {
     return true;
   }
 
-  Future<void> memberChanged(String memberName, RopeState to) async {
-    if (!to.isAlerting) {
-      await _cancel(memberName.hashCode & 0x7fffffff);
+  Future<void> memberChanged(String memberName, RopeState to, {String? memberId}) async {
+    final key = memberId ?? memberName;
+    final now = DateTime.now();
+    final previous = _lastState[key];
+    if (previous == to && now.difference(_lastAt[key] ?? now) < _duplicateCooldown) return;
+    // A late recovery packet must not announce recovery if we never warned.
+    if (to == RopeState.connected && (previous == null || previous == RopeState.connected)) return;
+    _lastState[key] = to;
+    _lastAt[key] = now;
+    final notificationId = key.hashCode & 0x7fffffff;
+    if (to == RopeState.connected) {
+      await _cancel(notificationId);
+      await _show(notificationId, 'Connection restored', '$memberName is connected to the group again.');
       return;
     }
     final (title, body) = switch (to) {
+      RopeState.weak => ('Weak Bluetooth connection', '$memberName’s connection is weakening. Keep the group together.'),
       RopeState.fallingBehind => ('1 member is falling behind', '$memberName is getting separated from the group. Wait or check on them.'),
       RopeState.separated => ('$memberName is separated', 'No contact for a minute. Stop the group and check the last-known position.'),
       RopeState.critical => ('CRITICAL: $memberName missing', 'No reconnection in the escalation window. Stop the group now.'),
       _ => ('', ''),
     };
     await _buzz(strong: to != RopeState.fallingBehind);
-    await _show(memberName.hashCode & 0x7fffffff, title, body, critical: to == RopeState.critical, alarm: to != RopeState.fallingBehind);
+    await _show(notificationId, title, body, critical: to == RopeState.critical, alarm: to == RopeState.separated || to == RopeState.critical);
   }
 
   Future<void> selfIsolated(bool isolated) async {
@@ -100,6 +114,8 @@ class RopeAlerts {
   }
 
   Future<void> clearAll() async {
+    _lastState.clear();
+    _lastAt.clear();
     if (!_ready) return;
     try {
       await _plugin.cancelAll();
@@ -145,7 +161,7 @@ class RopeAlerts {
             color: const Color(0xFF9DFF1E),
             ticker: title,
           ),
-          iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true, interruptionLevel: critical || alarm ? InterruptionLevel.critical : InterruptionLevel.timeSensitive),
+          iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true, interruptionLevel: InterruptionLevel.timeSensitive),
         ),
       );
     } catch (e) {
