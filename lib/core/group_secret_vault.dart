@@ -36,4 +36,15 @@ abstract final class GroupSecretVault {
     await _storage.delete(key: '$_prefix$id');
     _cache.remove(id);
   }
+
+  /// Delete every Trailseek group credential when the account/data is wiped.
+  /// Fail instead of silently leaving credentials behind.
+  static Future<void> clearAll() async {
+    final stored = await _storage.readAll();
+    for (final key in stored.keys.where((k) => k.startsWith(_prefix))) {
+      await _storage.delete(key: key);
+    }
+    _cache.clear();
+    _loaded = true;
+  }
 }
