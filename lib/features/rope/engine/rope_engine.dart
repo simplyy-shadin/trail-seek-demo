@@ -158,12 +158,16 @@ class RopeEngine {
     final newer = t.rssi.where((s) => !s.at.isBefore(mid)).map((s) => s.rssi).toList();
     if (older.length < 2 || newer.length < 2) return config.weakRssiDropDb.toDouble();
     // Median absolute deviation is robust against isolated BLE reflections.
-    double mad(List<int> xs) {
+    double jitter(List<int> xs) {
       final middle = _median(xs);
-      return _median(xs.map((v) => (v - middle).abs().round()).toList());
+      final mad = _median(xs.map((v) => (v - middle).abs().round()).toList());
+      // MAD alone can become zero for odd-sized alternating samples.
+      // Consecutive step variation catches that failure mode.
+      final steps = <int>[for (var i = 1; i < xs.length; i++) (xs[i] - xs[i - 1]).abs()];
+      return math.max(mad, _median(steps) / 2);
     }
-    final jitter = math.max(mad(older), mad(newer));
-    return math.max(config.weakRssiDropDb.toDouble(), jitter * config.rssiJitterMultiplier);
+    final noise = math.max(jitter(older), jitter(newer));
+    return math.max(config.weakRssiDropDb.toDouble(), noise * config.rssiJitterMultiplier);
   }
 
   double _median(List<int> xs) {
