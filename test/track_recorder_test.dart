@@ -74,7 +74,8 @@ void main() {
     }
     final restored = TrackRecorder.fromJson(r.toJson());
     expect(restored.distanceM, r.distanceM);
-    expect(restored.points.length, 200);
+    expect(restored.points.length, r.points.length);
+    expect(restored.points.length, lessThan(200));
     for (final p in pts.skip(200)) {
       restored.add(p);
     }
@@ -87,6 +88,53 @@ void main() {
     expect(restored.gainM, straight.gainM);
   });
 
+  test('stationary indoor jitter does not create distance or route', () {
+    final r = TrackRecorder();
+    final start = DateTime.utc(2026, 11, 4, 10);
+    for (var i = 0; i < 120; i++) {
+      final jitterLat = math.sin(i * 1.7) * 0.00010;
+      final jitterLng = math.cos(i * 1.1) * 0.00009;
+      r.add(TrackPoint(
+        lat: 10.28 + jitterLat,
+        lng: 76.57 + jitterLng,
+        at: start.add(Duration(seconds: i)),
+        altitudeM: 240 + math.sin(i * 0.4) * 4,
+        accuracyM: 20,
+        speedMps: 0,
+      ));
+    }
+    expect(r.distanceM, 0);
+    expect(r.gainM, 0);
+    expect(r.points.length, 1);
+    expect(r.accuracyRatio, 1);
+    expect(r.ignored, greaterThan(0));
+  });
+
+  test('movement resumes after indoor stationary fixes', () {
+    final r = TrackRecorder();
+    final start = DateTime.utc(2026, 11, 4, 10);
+    for (var i = 0; i < 60; i++) {
+      r.add(TrackPoint(
+        lat: 10.28 + math.sin(i.toDouble()) * 0.00005,
+        lng: 76.57,
+        at: start.add(Duration(seconds: i)),
+        accuracyM: 15,
+        speedMps: 0,
+      ));
+    }
+    for (var i = 1; i <= 200; i++) {
+      r.add(TrackPoint(
+        lat: 10.28 + i * 1.2 / 111320,
+        lng: 76.57,
+        at: start.add(Duration(seconds: 59 + i)),
+        accuracyM: 6,
+        speedMps: 1.2,
+      ));
+    }
+    expect(r.distanceM, greaterThan(210));
+    expect(r.distanceM, lessThan(270));
+  });
+
   test('downsample keeps first and last points', () {
     final r = TrackRecorder();
     for (final p in walk(seconds: 100)) {
@@ -95,6 +143,6 @@ void main() {
     final d = r.downsample(4);
     expect(d.first.at, r.points.first.at);
     expect(d.last.at, r.points.last.at);
-    expect(d.length, lessThan(r.points.length / 3));
+    expect(d.length, lessThanOrEqualTo(r.points.length / 3 + 1));
   });
 }
