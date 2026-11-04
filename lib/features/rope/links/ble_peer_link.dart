@@ -13,6 +13,7 @@ import 'peer_link.dart';
 import 'rope_packet.dart';
 import 'rope_roster.dart';
 import 'rope_action_relay.dart';
+import 'rope_control_frame.dart';
 import 'rope_safety_relay.dart';
 import 'rope_security.dart';
 
@@ -92,6 +93,7 @@ class BlePeerLink implements PeerLink {
   Uint8List? _rosterCipherCache;
   DateTime? _rosterCacheAt;
   final Map<int, DateTime> _lastHintSync = {};
+  int _controlSequence = 0;
   final List<StreamSubscription> _subs = [];
 
   GroupSession? _session;
@@ -411,27 +413,16 @@ class BlePeerLink implements PeerLink {
       _syncRound();
     }
 
-    if (packet.requestStart && self.memberIndex == 0) {
-      final last = _requestSeen[sender.id];
-      if (last == null || now.difference(last) > const Duration(seconds: 5)) onStartRequest?.call(sender);
-      _requestSeen[sender.id] = now;
-    }
-    if (packet.ending && packet.memberIndex == 0 && self.memberIndex != 0 && !_endSeen) {
-      _endSeen = true;
-      _log('organizer ended the trek');
-      onGroupEnd?.call();
-    }
-
-    // Direct fast-path: warnings fit in the existing 8-byte heartbeat.
-    if (packet.safetySignal != null && packet.safetySubjectIndex != null) {
-      _receiveSafetyAlert(SafetyAlert(
-        sessionHash: _sessionHash,
-        reporterIndex: packet.memberIndex,
-        subjectIndex: packet.safetySubjectIndex!,
-        sequence: packet.seq,
-        signal: packet.safetySignal!,
-        createdAt: now,
-      ), now);
+    // Advertisements contain no room for a cryptographic tag, so treat all
+    // manual actions, weak warnings and organizer controls as *untrusted hints*.
+    // Only the authenticated GATT frames below may vibrate, start or end a group.
+    if (packet.flags != 0 || packet.safetySignal != null ||
+        packet.requestStart || packet.ending) {
+      final previous = _lastHintSync[packet.memberIndex];
+      if (previous == null || now.difference(previous) > const Duration(seconds: 3)) {
+        _lastHintSync[packet.memberIndex] = now;
+        if (!_syncing) unawaited(_syncRound());
+      }
     }
 
     _recentDirect[packet.memberIndex] = now;
@@ -446,26 +437,8 @@ class BlePeerLink implements PeerLink {
       }
     }
 
-    // V2 packets repeat the same event sequence while advertising.
-    // Deliver only one notification for each origin/sequence pair.
-    final type = switch (packet.flags) {
-      RopePacket.flagImOk => RopeMessageType.imOk,
-      RopePacket.flagWaitForMe => RopeMessageType.waitForMe,
-      RopePacket.flagNeedHelp => RopeMessageType.needHelp,
-      RopePacket.flagGroupAlert => RopeMessageType.groupAlert,
-      RopePacket.flagStopGroup => RopeMessageType.stopGroup,
-      _ => null,
-    };
-    if (type != null && packet.actionV2) {
-      _receiveAction(RopeActionFrame(
-        sessionHash: _sessionHash, originIndex: packet.memberIndex,
-        sequence: packet.seq, type: type, sentAt: now,
-      ), now);
-    } else if (type != null && _lastFlags[packet.memberIndex] != packet.flags) {
-      // Legacy packets have no stable event ID. Display one direct message,
-      // but never synthesize relay IDs from changing heartbeat counters.
-      _msg.add(RopeMessage(type: type, fromMemberId: sender.id, at: now));
-    }
+    // No action is dispatched from the unauthenticated advertising local name.
+    // Full HMAC-protected GATT frames produce notifications in _onRosterWrite.
     _lastFlags[packet.memberIndex] = packet.flags;
   }
 
@@ -514,6 +487,11 @@ class BlePeerLink implements PeerLink {
       _log('rejected unauthenticated BLE write');
       return;
     }
+    final control = RopeControlFrame.fromBytes(payload, now: DateTime.now());
+    if (control != null) {
+      _receiveControl(control);
+      return;
+    }
     final action = RopeActionFrame.fromBytes(payload);
     if (action != null) {
       _receiveAction(action, DateTime.now());
@@ -542,6 +520,26 @@ class BlePeerLink implements PeerLink {
     _log('join request from ${join.name} -> #$idx');
     _status('${join.name} joined as #$idx');
     onRosterChanged?.call(members, s.organizerId);
+  }
+
+  void _receiveControl(RopeControlFrame control) {
+    final s = _session;
+    final self = _self;
+    if (s == null || self == null) return;
+    final member = s.members.where((m) => m.memberIndex == control.originIndex).firstOrNull;
+    if (member == null) return;
+    if (control.type == RopeControlType.requestStart && self.memberIndex == 0 &&
+        control.originIndex != 0) {
+      final last = _requestSeen[member.id];
+      if (last == null || DateTime.now().difference(last) > const Duration(seconds: 5)) {
+        onStartRequest?.call(member);
+      }
+      _requestSeen[member.id] = DateTime.now();
+    } else if (control.type == RopeControlType.endGroup &&
+        control.originIndex == 0 && self.memberIndex != 0 && !_endSeen) {
+      _endSeen = true;
+      onGroupEnd?.call();
+    }
   }
 
   void _receiveSafetyAlert(SafetyAlert alert, DateTime now) {
@@ -679,6 +677,22 @@ class BlePeerLink implements PeerLink {
           await _central.writeCharacteristic(peripheral, ch,
             value: joined, type: GATTCharacteristicWriteType.withResponse)
             .timeout(const Duration(seconds: 8));
+        }
+        // Organizer/member control must also be MAC-protected; the
+        // corresponding advertising bits only request an early sync.
+        if (self.memberIndex != unassignedMemberIndex &&
+            (requestingStart || ending)) {
+          final kind = ending ? RopeControlType.endGroup : RopeControlType.requestStart;
+          final control = RopeControlFrame(
+            type: kind,
+            originIndex: self.memberIndex,
+            sequence: _controlSequence++ & 0xFF,
+            createdAt: DateTime.now(),
+          );
+          await _central.writeCharacteristic(peripheral, ch,
+            value: _security!.signMessage(control.toBytes()),
+            type: GATTCharacteristicWriteType.withResponse)
+            .timeout(const Duration(seconds: 5));
         }
         // Push a few distinct, bounded 12-byte warnings over the same GATT
         // connection. Acknowledged writes and event IDs prevent relay loops;
