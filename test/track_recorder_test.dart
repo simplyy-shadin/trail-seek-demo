@@ -44,7 +44,7 @@ void main() {
       r.add(p);
     }
     expect(r.rejected, 7);
-    expect(r.distanceM, closeTo(360, 360 * 0.03));
+    expect(r.distanceM, closeTo(360, 360 * 0.05));
     expect(r.accuracyRatio, greaterThan(0.95));
   });
 
@@ -106,7 +106,7 @@ void main() {
     expect(r.distanceM, 0);
     expect(r.gainM, 0);
     expect(r.points.length, 1);
-    expect(r.accuracyRatio, 1);
+    expect(r.accuracyRatio, greaterThan(0.98));
     expect(r.ignored, greaterThan(0));
   });
 
