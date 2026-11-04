@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart' as digest;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -103,6 +106,9 @@ class _BleDiagnosticsScreenState extends ConsumerState<BleDiagnosticsScreen> {
       members: [self],
       status: SessionStatus.lobby,
       simulated: false,
+      // BENCH ONLY: deterministic test key keeps two-code diagnostics usable.
+      // Never use this derivation in real group creation or secure QR joins.
+      securityKey: digest.sha256.convert(utf8.encode('trailseek-bench-only:${_code.text.trim().toUpperCase()}')).toString(),
     );
     final link = BlePeerLink(
       syncInterval: const Duration(seconds: 6),
@@ -113,6 +119,7 @@ class _BleDiagnosticsScreenState extends ConsumerState<BleDiagnosticsScreen> {
           id: s.id, code: s.code, name: s.name, adventureId: s.adventureId, adventureName: s.adventureName, date: s.date,
           expectedStart: s.expectedStart, plannedSize: s.plannedSize, organizerId: organizerId ?? s.organizerId, members: members,
           status: s.status, simulated: false,
+          securityKey: s.securityKey,
         );
         _session = updated;
         _link?.updateSession(updated);
