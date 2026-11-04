@@ -103,7 +103,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         title: const Text('Group lobby'),
         actions: [
           IconButton(
-            onPressed: () => SharePlus.instance.share(
+            onPressed: (!s.simulated && s.securityKey == null) ? null : () => SharePlus.instance.share(
               ShareParams(
                 text: AppLinks.groupInvite(groupName: s.name, adventureName: s.adventureName, date: DateFormat('d MMM').format(s.date), code: s.code, securityKey: s.securityKey),
               ),
@@ -132,7 +132,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               child: Text('This group predates secure invitations. Create a new real group before using Bluetooth.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orange)),
             ),
           const SizedBox(height: 22),
-          Center(
+          if (s.simulated || s.securityKey != null)
+            Center(
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
@@ -141,7 +142,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
           const SizedBox(height: 18),
           InkWell(
-            onTap: () {
+            onTap: (!s.simulated && s.securityKey == null) ? null : () {
               Clipboard.setData(ClipboardData(text: s.simulated ? s.code : link));
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitation copied')));
             },
@@ -152,7 +153,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 34, letterSpacing: 8, fontWeight: FontWeight.w900),
                 ),
-                Text(s.simulated ? 'tap to copy demo code' : 'tap to copy secure invitation', style: const TextStyle(fontSize: 11, color: TsColors.muted)),
+                Text(s.simulated ? 'tap to copy demo code' : (s.securityKey == null ? 'create a new group to invite' : 'tap to copy secure invitation'), style: const TextStyle(fontSize: 11, color: TsColors.muted)),
               ],
             ),
           ),
