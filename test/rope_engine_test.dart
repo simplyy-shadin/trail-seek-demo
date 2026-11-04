@@ -99,6 +99,39 @@ void main() {
       expect(e.latest!.members['rahul']!.state, RopeState.connected);
     });
 
+    test('noisy RSSI fluctuations do not create false weak warnings', () {
+      final e = engine(members: ['anu']);
+      for (var i = 0; i < 16; i++) {
+        final at = t0.add(Duration(seconds: i * 2));
+        // Both halves lose 15 dB on average, but each is highly variable.
+        // The adaptive MAD floor suppresses this unreliable trend.
+        final rssi = i < 8
+            ? (i.isEven ? -57 : -73)
+            : (i.isEven ? -72 : -88);
+        e.observe(PeerObservation(memberId: 'anu', at: at, rssi: rssi));
+        e.tick(at);
+      }
+      expect(e.latest!.members['anu']!.state, RopeState.connected);
+    });
+
+    test('weak signal requires clean heartbeat recovery, not one lucky packet', () {
+      final e = engine(members: ['anu']);
+      walk(e, t0, t0.add(const Duration(seconds: 20)));
+      final missedAt = t0.add(const Duration(seconds: 26));
+      e.tick(missedAt);
+      expect(e.latest!.members['anu']!.state, RopeState.weak);
+      final one = missedAt.add(const Duration(seconds: 1));
+      e.observe(PeerObservation(memberId: 'anu', at: one, rssi: -60));
+      e.tick(one);
+      expect(e.latest!.members['anu']!.state, RopeState.weak);
+      for (var i = 2; i <= 4; i++) {
+        final at = missedAt.add(Duration(seconds: i));
+        e.observe(PeerObservation(memberId: 'anu', at: at, rssi: -60));
+        e.tick(at);
+      }
+      expect(e.latest!.members['anu']!.state, RopeState.connected);
+    });
+
     test('when most of the group goes quiet, it is us who fell behind', () {
       final e = engine();
       walk(e, t0, t0.add(const Duration(seconds: 20)));
