@@ -96,7 +96,9 @@ class SessionInfo {
 class RosterSnapshot {
   const RosterSnapshot({required this.sessionHash, required this.code, required this.entries, this.info});
 
-  static const maxBytes = 512;
+  // Reserve 29 bytes for AES-GCM magic, 96-bit nonce and 128-bit tag.
+  // BLE GATT long-read size limit is 512 bytes including encryption overhead.
+  static const maxBytes = 483;
 
   factory RosterSnapshot.fromBytes(Uint8List bytes) {
     final lines = utf8.decode(bytes).split('\n').where((l) => l.isNotEmpty).toList();
