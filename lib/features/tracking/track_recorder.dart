@@ -51,7 +51,9 @@ class TrackRecorder {
     this.maxAccuracyM = 25,
     this.maxSpeedMps = 8,
     this.gainThresholdM = 3,
-    this.altitudeWindow = 5,
+    // Fewer accepted GPS fixes after drift suppression: a three-sample
+    // median reduces altitude lag while still rejecting short spikes.
+    this.altitudeWindow = 3,
     this.movingSpeedMps = 0.5,
     this.minMovementM = 5,
     this.accuracyMovementFactor = 1.4,
