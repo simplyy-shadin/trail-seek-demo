@@ -94,7 +94,7 @@ class RopeAlerts {
       RopeState.critical => ('CRITICAL: $memberName missing', 'No reconnection in the escalation window. Stop the group now.'),
       _ => ('', ''),
     };
-    await _buzz(strong: to != RopeState.fallingBehind);
+    await _buzz(strong: to == RopeState.separated || to == RopeState.critical);
     await _show(notificationId, title, body, critical: to == RopeState.critical, alarm: to == RopeState.separated || to == RopeState.critical);
   }
 
