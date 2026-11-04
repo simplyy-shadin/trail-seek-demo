@@ -8,10 +8,27 @@ abstract final class AppLinks {
   static const privacy = 'https://c00lpixer.github.io/trailseek/privacy.html';
   static const terms = 'https://c00lpixer.github.io/trailseek/terms.html';
 
-  static String joinDeepLink(String code) => 'trailseek://join/$code';
+  static String joinDeepLink(String code, {String? securityKey}) {
+    final uri = Uri(
+      scheme: 'trailseek',
+      host: 'join',
+      path: '/$code',
+      queryParameters: securityKey == null ? null : {'key': securityKey},
+    );
+    return uri.toString();
+  }
 
-  static String groupInvite({required String groupName, required String adventureName, required String date, required String code}) =>
-      'Join my Trail Seek group "$groupName" for $adventureName on $date. Code: $code\n'
-      'Get the Android app: $androidApk\n'
-      'Open the app → Groups → Join → enter $code';
+  static String groupInvite({
+    required String groupName,
+    required String adventureName,
+    required String date,
+    required String code,
+    String? securityKey,
+  }) =>
+      'Join my Trail Seek group "$groupName" for $adventureName on $date.\\n'
+      'Code: $code\\n'
+      '${joinDeepLink(code, securityKey: securityKey)}\\n'
+      'Scan this private invitation QR/link in Trail Seek to join securely. '
+      'Do not post the invite publicly.\\n'
+      'Get the Android app: $androidApk';
 }
