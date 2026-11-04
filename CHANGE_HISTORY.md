@@ -14,8 +14,24 @@
 | GPS drift and real elevation fix | Merged into `main` | [PR #1](https://github.com/simplyy-shadin/trail-seek-demo/pull/1) |
 | Automatic Bluetooth safety alerts | Merged into `main` | [PR #2](https://github.com/simplyy-shadin/trail-seek-demo/pull/2) |
 | Adaptive GPS threshold experiment | Pushed on separate branch; **NOT merged** | [Branch](https://github.com/simplyy-shadin/trail-seek-demo/tree/fix/adaptive-gps-noise-thresholds) |
-| Manual SOS/STOP/WAIT multi-hop draft | **Local draft only; NOT pushed** | Not yet part of GitHub |
+| Manual SOS/STOP/WAIT multi-hop fix | **Pushed to feature branch; draft PR, not merged** | [PR #3](https://github.com/simplyy-shadin/trail-seek-demo/pull/3) |
 | Physical BLE / iOS lock-screen field tests | Pending | Automated unit tests are not hardware validation |
+
+## 2026-11-04 — PR #3: Multi-hop manual SOS / STOP / WAIT / I'M OKAY
+
+- **Status:** Pushed to `fix/manual-multi-hop-messages`. [Draft PR #3](https://github.com/simplyy-shadin/trail-seek-demo/pull/3) — **NOT MERGED** into `main`.
+- **Why:** Manual quick actions previously stopped at the first Bluetooth neighbour; an increasing heartbeat sequence was unsafe to forward.
+- **Validation:** GitHub CI analyzer, action relay tests, and full Flutter tests **pending**. Physical iOS/Android multi-hop and locked-screen tests **not run**.
+- **Known limitations:** A successful GATT write does not prove end-to-end delivery. Group authentication and recipient acknowledgements remain future work. iOS sideload workflow unchanged.
+- **Full diff and commit history:** [PR #3 Files changed](https://github.com/simplyy-shadin/trail-seek-demo/pull/3/files).
+
+| Code file | Changed lines (PR new side) | Purpose |
+| --- | --- | --- |
+| [`.github/workflows/ios.yml`](https://github.com/simplyy-shadin/trail-seek-demo/blob/fix/manual-multi-hop-messages/.github/workflows/ios.yml) | `L33-L40` | Focus the Flutter analyzer on manual BLE relay code; retain full test suite and existing iOS sideload build steps. |
+| [`lib/features/rope/links/ble_peer_link.dart`](https://github.com/simplyy-shadin/trail-seek-demo/blob/fix/manual-multi-hop-messages/lib/features/rope/links/ble_peer_link.dart) | `L12-L18, L82-L89, L214-L223, L278-L285, L317-L344, L347-L357, L362-L369, L430-L454, L469-L479, L514-L537, L635-L650` | Queue stable manual actions, send immediate BLE beacon, relay unseen GATT messages across neighbours and emit existing notifications. |
+| [`lib/features/rope/links/rope_action_relay.dart`](https://github.com/simplyy-shadin/trail-seek-demo/blob/fix/manual-multi-hop-messages/lib/features/rope/links/rope_action_relay.dart) | `L1-L168` | NEW: bounded 12-byte action frames, stable event IDs, hop cap, priority ordering, expiry and duplicate prevention. |
+| [`lib/features/rope/links/rope_packet.dart`](https://github.com/simplyy-shadin/trail-seek-demo/blob/fix/manual-multi-hop-messages/lib/features/rope/links/rope_packet.dart) | `L22-L28, L44-L52, L66-L72, L90-L96` | Add v2 action marker to the existing eight-byte heartbeat without changing iOS/Android platform settings. |
+| [`test/rope_action_relay_test.dart`](https://github.com/simplyy-shadin/trail-seek-demo/blob/fix/manual-multi-hop-messages/test/rope_action_relay_test.dart) | `L1-L138` | NEW: simulated 10-phone nine-hop relay; SOS priority; bad/expired packets; legacy compatibility, auto-alert bit coexistence, replay protection. |
 
 ## 2026-11-04 — PR #2: Automatic Bluetooth link-safety alerts & multi-hop relay
 
