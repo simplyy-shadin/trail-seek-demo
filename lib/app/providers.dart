@@ -526,8 +526,10 @@ class GroupController extends Notifier<List<GroupSession>> {
 
   /// Deletes a group from this phone (any status).
   Future<void> delete(String sessionId) async {
+    if (byId(sessionId)?.securityKey != null) {
+      await GroupSecretVault.remove(sessionId);
+    }
     await _save([for (final s in state) if (s.id != sessionId) s]);
-    await GroupSecretVault.remove(sessionId);
   }
 
   Future<void> _replace(GroupSession updated) => _save([for (final s in state) s.id == updated.id ? updated : s]);
