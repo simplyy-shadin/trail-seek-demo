@@ -381,6 +381,9 @@ class GroupController extends Notifier<List<GroupSession>> {
     final selfName = user?.displayName.isNotEmpty == true ? user!.displayName : 'You';
     final existing = state.where((s) => s.code == code.toUpperCase()).firstOrNull;
     if (existing != null) {
+      if (existing.simulated != simulated) {
+        throw StateError('Saved demo/real group conflicts with this invitation; use a new group.');
+      }
       if (!simulated && existing.securityKey != null && existing.securityKey != securityKey!.toLowerCase()) {
         throw StateError('This secure invitation does not match the saved group.');
       }
