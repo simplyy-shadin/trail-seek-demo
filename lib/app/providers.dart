@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/group_secret_vault.dart';
 import '../data/models/activity_category.dart';
 import '../data/models/app_user.dart';
 import '../data/models/adventure.dart';
@@ -20,6 +21,7 @@ import 'backend.dart';
 import '../data/repositories/local_store.dart';
 import '../features/progress/progress.dart';
 import '../features/rope/links/rope_roster.dart';
+import '../features/rope/links/rope_security.dart';
 
 // ---------------------------------------------------------------- storage
 
@@ -364,21 +366,36 @@ class GroupController extends Notifier<List<GroupSession>> {
       members: [self],
       status: SessionStatus.lobby,
       simulated: simulated,
+      securityKey: simulated ? null : RopeSecurity.generateKey(),
     );
     await _save([session, ...state]);
     return session;
   }
 
-  Future<GroupSession> join({required String code, Adventure? adventure, required bool simulated}) async {
+  Future<GroupSession> join({required String code, Adventure? adventure, required bool simulated, String? securityKey}) async {
+    if (!simulated && !RopeSecurity.validKey(securityKey)) {
+      throw StateError('Scan the organizer secure QR invitation to join a real group.');
+    }
     final user = ref.read(authProvider);
     final selfId = user?.id ?? 'local-user';
     final selfName = user?.displayName.isNotEmpty == true ? user!.displayName : 'You';
     final existing = state.where((s) => s.code == code.toUpperCase()).firstOrNull;
     if (existing != null) {
-      if (existing.members.any((m) => m.id == selfId)) return existing;
+      if (!simulated && existing.securityKey != null && existing.securityKey != securityKey!.toLowerCase()) {
+        throw StateError('This secure invitation does not match the saved group.');
+      }
+      if (existing.members.any((m) => m.id == selfId)) {
+        if (!simulated && existing.securityKey == null) {
+          final updated = existing.copyWith(securityKey: securityKey!.toLowerCase());
+          await _replace(updated);
+          return updated;
+        }
+        return existing;
+      }
       final me = Member(
           id: selfId, displayName: selfName, role: MemberRole.member, memberIndex: existing.members.length, isSelf: true, avatarId: user?.avatarId);
-      final updated = existing.copyWith(members: [...existing.members, me]);
+      final updated = existing.copyWith(members: [...existing.members, me],
+          securityKey: simulated ? null : securityKey!.toLowerCase());
       await _replace(updated);
       return updated;
     }
@@ -407,6 +424,7 @@ class GroupController extends Notifier<List<GroupSession>> {
       members: simulated ? [demoOrganizer, me] : [me],
       status: SessionStatus.lobby,
       simulated: simulated,
+      securityKey: simulated ? null : securityKey!.toLowerCase(),
     );
     await _save([session, ...state]);
     return session;
@@ -481,6 +499,7 @@ class GroupController extends Notifier<List<GroupSession>> {
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       simulated: s.simulated,
+      securityKey: s.securityKey,
     );
     await _replace(updated);
     return updated;
@@ -503,11 +522,20 @@ class GroupController extends Notifier<List<GroupSession>> {
   }
 
   /// Deletes a group from this phone (any status).
-  Future<void> delete(String sessionId) => _save([for (final s in state) if (s.id != sessionId) s]);
+  Future<void> delete(String sessionId) async {
+    await _save([for (final s in state) if (s.id != sessionId) s]);
+    await GroupSecretVault.remove(sessionId);
+  }
 
   Future<void> _replace(GroupSession updated) => _save([for (final s in state) s.id == updated.id ? updated : s]);
 
   Future<void> _save(List<GroupSession> sessions) async {
+    for (final s in sessions) {
+      final secret = s.securityKey;
+      if (secret != null && GroupSecretVault.get(s.id) != secret) {
+        await GroupSecretVault.save(s.id, secret);
+      }
+    }
     await ref.read(localStoreProvider).setSessions(sessions);
     state = sessions;
   }
