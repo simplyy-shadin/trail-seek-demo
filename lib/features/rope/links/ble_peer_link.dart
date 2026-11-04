@@ -12,6 +12,7 @@ import '../engine/rope_models.dart';
 import 'peer_link.dart';
 import 'rope_packet.dart';
 import 'rope_roster.dart';
+import 'rope_action_relay.dart';
 import 'rope_safety_relay.dart';
 
 /// Cross-platform Bluetooth Low Energy transport for the Digital Rope.
@@ -81,6 +82,8 @@ class BlePeerLink implements PeerLink {
   final _peripheral = PeripheralManager();
   final _obs = StreamController<PeerObservation>.broadcast();
   final _msg = StreamController<RopeMessage>.broadcast();
+  RopeActionRelay? _actionRelay;
+  int? _pendingActionSequence;
   final _syncState = StreamController<String>.broadcast();
   final _safetyAlerts = StreamController<SafetyAlert>.broadcast();
   SafetyAlertRelay? _safetyRelay;
@@ -211,6 +214,10 @@ class BlePeerLink implements PeerLink {
     _session = session;
     _self = self;
     _sessionHash = RopePacket.hashCode16(session.code);
+    _actionRelay = RopeActionRelay(sessionHash: _sessionHash);
+    _pendingActionSequence = null;
+    _pendingFlagBeats = 0;
+    _pendingFlags = 0;
     _safetyRelay = SafetyAlertRelay(sessionHash: _sessionHash);
 
     _log('start code=${session.code} self=${self.displayName}#${self.memberIndex}');
@@ -271,6 +278,8 @@ class BlePeerLink implements PeerLink {
     _syncKickoff = null;
     _syncTimer?.cancel();
     _syncTimer = null;
+    _actionRelay = null;
+    _pendingActionSequence = null;
     _safetyRelay = null;
     for (final s in _subs) {
       await s.cancel();
@@ -308,17 +317,28 @@ class BlePeerLink implements PeerLink {
     if (flag == 0) return;
     // Actions ride on the next few heartbeats so a single dropped
     // advertisement does not lose them.
+    final self = _self;
+    final relay = _actionRelay;
+    if (_stopped || self == null || relay == null ||
+        self.memberIndex < 0 || self.memberIndex >= 16) return;
+    final created = relay.create(
+      originIndex: self.memberIndex, type: message.type, now: DateTime.now(),
+    );
+    _pendingActionSequence = created.sequence;
     _pendingFlags = flag;
     _pendingFlagBeats = 8;
     _msg.add(message);
     await _beat();
+    if (!_syncing) unawaited(_syncRound());
   }
 
   // ------------------------------------------------------------ heartbeats
 
   RopePacket _buildPacket() {
     final now = DateTime.now();
-    final safety = _safetyRelay?.localBeacon(now);
+    // Quick actions take precedence while the message is advertised.
+    final advertisingAction = _pendingFlagBeats > 0;
+    final safety = advertisingAction ? null : _safetyRelay?.localBeacon(now);
     final freshness = config.heartbeatInterval * 5;
     var gossip = 0;
     _recentDirect.forEach((idx, at) {
@@ -327,10 +347,11 @@ class BlePeerLink implements PeerLink {
     return RopePacket(
       sessionHash: _sessionHash,
       memberIndex: _self?.memberIndex ?? unassignedMemberIndex,
-      seq: safety?.sequence ?? _seq,
+      seq: advertisingAction ? (_pendingActionSequence ?? _seq) : (safety?.sequence ?? _seq),
       safetySignal: safety?.signal,
       safetySubjectIndex: safety?.subjectIndex,
-      flags: _pendingFlagBeats > 0 ? _pendingFlags : 0,
+      actionV2: advertisingAction,
+      flags: advertisingAction ? _pendingFlags : 0,
       gossip: gossip,
       starting: startAt != null && startAt!.isAfter(now),
       requestStart: requestingStart,
@@ -341,8 +362,8 @@ class BlePeerLink implements PeerLink {
   Future<void> _beat() async {
     if (_stopped) return;
     _seq = (_seq + 1) & 0xFF;
-    if (_pendingFlagBeats > 0) _pendingFlagBeats--;
     final packet = _buildPacket();
+    if (_pendingFlagBeats > 0) _pendingFlagBeats--;
     try {
       if (_advertising) await _peripheral.stopAdvertising();
       await _peripheral.startAdvertising(Advertisement(name: packet.encode(), serviceUUIDs: [serviceUuid]));
@@ -409,17 +430,25 @@ class BlePeerLink implements PeerLink {
       }
     }
 
-    final previous = _lastFlags[packet.memberIndex] ?? 0;
-    if (packet.flags != 0 && packet.flags != previous) {
-      final type = switch (packet.flags) {
-        RopePacket.flagImOk => RopeMessageType.imOk,
-        RopePacket.flagWaitForMe => RopeMessageType.waitForMe,
-        RopePacket.flagNeedHelp => RopeMessageType.needHelp,
-        RopePacket.flagGroupAlert => RopeMessageType.groupAlert,
-        RopePacket.flagStopGroup => RopeMessageType.stopGroup,
-        _ => null,
-      };
-      if (type != null) _msg.add(RopeMessage(type: type, fromMemberId: sender.id, at: now));
+    // V2 packets repeat the same event sequence while advertising.
+    // Deliver only one notification for each origin/sequence pair.
+    final type = switch (packet.flags) {
+      RopePacket.flagImOk => RopeMessageType.imOk,
+      RopePacket.flagWaitForMe => RopeMessageType.waitForMe,
+      RopePacket.flagNeedHelp => RopeMessageType.needHelp,
+      RopePacket.flagGroupAlert => RopeMessageType.groupAlert,
+      RopePacket.flagStopGroup => RopeMessageType.stopGroup,
+      _ => null,
+    };
+    if (type != null && packet.actionV2) {
+      _receiveAction(RopeActionFrame(
+        sessionHash: _sessionHash, originIndex: packet.memberIndex,
+        sequence: packet.seq, type: type, sentAt: now,
+      ), now);
+    } else if (type != null && _lastFlags[packet.memberIndex] != packet.flags) {
+      // Legacy packets have no stable event ID. Display one direct message,
+      // but never synthesize relay IDs from changing heartbeat counters.
+      _msg.add(RopeMessage(type: type, fromMemberId: sender.id, at: now));
     }
     _lastFlags[packet.memberIndex] = packet.flags;
   }
@@ -440,6 +469,11 @@ class BlePeerLink implements PeerLink {
 
   void _onRosterWrite(GATTCharacteristicWriteRequestedEventArgs e) {
     _peripheral.respondWriteRequest(e.request);
+    final action = RopeActionFrame.fromBytes(e.request.value);
+    if (action != null) {
+      _receiveAction(action, DateTime.now());
+      return;
+    }
     // Safety events share this write characteristic but never modify the roster.
     final safety = SafetyAlert.fromBytes(e.request.value);
     if (safety != null) {
@@ -477,6 +511,24 @@ class BlePeerLink implements PeerLink {
     if (_safetyRelay?.accept(alert, now: now) != true) return;
     if (!_safetyAlerts.isClosed) _safetyAlerts.add(alert);
     // Advance newly learned warnings toward our other neighbours immediately.
+    if (!_syncing) unawaited(_syncRound());
+  }
+
+  void _receiveAction(RopeActionFrame action, DateTime now) {
+    final group = _session;
+    if (_stopped || group == null) return;
+    final member = group.members
+        .where((m) => m.memberIndex == action.originIndex).firstOrNull;
+    if (member == null || _actionRelay?.accept(action, now: now) != true) {
+      return;
+    }
+    if (!_msg.isClosed) {
+      _msg.add(RopeMessage(
+        type: action.type, fromMemberId: member.id, at: action.sentAt,
+      ));
+    }
+    // Push toward neighbouring phones; on a busy sync round the next
+    // scheduled round will pick up this queued event.
     if (!_syncing) unawaited(_syncRound());
   }
 
@@ -582,6 +634,16 @@ class BlePeerLink implements PeerLink {
           await _central.writeCharacteristic(peripheral, ch,
             value: alert.toBytes(), type: GATTCharacteristicWriteType.withResponse)
             .timeout(const Duration(seconds: 5));
+        }
+        // A GATT response confirms only this neighbour received the frame.
+        // End-to-end delivery to everyone cannot be assumed.
+        final actions = _actionRelay?.pending(DateTime.now(), limit: 4)
+            ?? const <RopeActionFrame>[];
+        for (final action in actions) {
+          await _central.writeCharacteristic(
+            peripheral, ch, value: action.toBytes(),
+            type: GATTCharacteristicWriteType.withResponse,
+          ).timeout(const Duration(seconds: 5));
         }
         final bytes = await _central.readCharacteristic(peripheral, ch).timeout(const Duration(seconds: 8));
         final readAt = DateTime.now();
