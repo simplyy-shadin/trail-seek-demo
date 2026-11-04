@@ -35,7 +35,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos lib/features/tracking/track_recorder.dart lib/features/rope/rope_controller.dart lib/features/rope/live_tracking_screen.dart
       - run: flutter test test/track_recorder_test.dart
-      - run: flutter test
+      - run: flutter test --reporter expanded
 
   ios:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
