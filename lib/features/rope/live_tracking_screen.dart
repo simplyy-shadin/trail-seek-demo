@@ -276,7 +276,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                       children: [
                         Expanded(child: _Stat(rope.distanceKm < 1 ? '${(rope.distanceKm * 1000).round()} m' : '${rope.distanceKm.toStringAsFixed(2)} km', 'Distance')),
                         Expanded(child: _Stat(_fmt(rope.elapsed), 'Time')),
-                        Expanded(child: _Stat('${rope.elevationM} m', 'Elevation')),
+                        Expanded(child: _Stat(rope.elevationM == null ? '—' : '${rope.elevationM} m', 'Elevation')),
                       ],
                     ),
                     const SizedBox(height: 14),
