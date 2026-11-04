@@ -9,6 +9,7 @@ class RopeConfig {
     this.heartbeatInterval = const Duration(seconds: 2),
     this.weakMissedHeartbeats = 2,
     this.weakRssiDropDb = 12,
+    this.rssiJitterMultiplier = 2.5,
     this.rssiWindow = const Duration(seconds: 30),
     this.fallingBehindAfter = const Duration(seconds: 20),
     this.weakSustainedForFallingBehind = const Duration(seconds: 45),
@@ -25,6 +26,10 @@ class RopeConfig {
 
   /// RSSI median drop across [rssiWindow] that marks a member weak.
   final int weakRssiDropDb;
+
+  /// Raise the weak-signal threshold when RSSI measurements fluctuate.
+  /// Prevents random reflections/phone orientation from causing alert spam.
+  final double rssiJitterMultiplier;
 
   /// Window over which the RSSI trend is evaluated.
   final Duration rssiWindow;

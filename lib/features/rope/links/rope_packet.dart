@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'rope_safety_relay.dart';
+
 /// The 8-byte heartbeat that rides inside every BLE advertisement.
 ///
 /// Layout: sessionHash(2) memberIndex(1) seq(1) flags(1) gossip(2) extra(1).
@@ -20,6 +22,8 @@ class RopePacket {
     this.starting = false,
     this.requestStart = false,
     this.ending = false,
+    this.safetySubjectIndex,
+    this.safetySignal,
   });
 
   final int sessionHash;
@@ -39,6 +43,11 @@ class RopePacket {
   /// The organizer is ending the trek for everyone.
   final bool ending;
 
+  /// Optional fast one-hop safety warning in otherwise unused packet bits.
+  /// Full event identity and multi-hop forwarding use the GATT relay.
+  final int? safetySubjectIndex;
+  final SafetySignal? safetySignal;
+
   static const flagImOk = 0x01;
   static const flagWaitForMe = 0x02;
   static const flagNeedHelp = 0x04;
@@ -50,9 +59,11 @@ class RopePacket {
     b.setUint16(0, sessionHash & 0xFFFF);
     b.setUint8(2, memberIndex & 0xFF);
     b.setUint8(3, seq & 0xFF);
-    b.setUint8(4, flags & 0xFF);
+    final code = safetySignal == null ? 0 : safetySignal!.index + 1;
+    b.setUint8(4, (flags & 0x1F) | (code << 5));
     b.setUint16(5, gossip & 0xFFFF);
-    b.setUint8(7, (starting ? 1 : 0) | (requestStart ? 2 : 0) | (ending ? 4 : 0));
+    b.setUint8(7, (starting ? 1 : 0) | (requestStart ? 2 : 0) | (ending ? 4 : 0) |
+        (code == 0 ? 0 : ((safetySubjectIndex ?? 0) & 0x0F) << 3));
     return b.buffer.asUint8List();
   }
 
@@ -64,15 +75,19 @@ class RopePacket {
       final bytes = base64Url.decode('$name=');
       if (bytes.length != 8) return null;
       final b = ByteData.sublistView(bytes);
+      final code = b.getUint8(4) >> 5;
+      if (code > SafetySignal.values.length) return null;
       return RopePacket(
         sessionHash: b.getUint16(0),
         memberIndex: b.getUint8(2),
         seq: b.getUint8(3),
-        flags: b.getUint8(4),
+        flags: b.getUint8(4) & 0x1F,
         gossip: b.getUint16(5),
         starting: b.getUint8(7) & 1 == 1,
         requestStart: b.getUint8(7) & 2 == 2,
         ending: b.getUint8(7) & 4 == 4,
+        safetySubjectIndex: code == 0 ? null : ((b.getUint8(7) >> 3) & 0x0F),
+        safetySignal: code == 0 ? null : SafetySignal.values[code - 1],
       );
     } on FormatException {
       return null;

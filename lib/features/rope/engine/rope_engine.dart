@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'geo.dart';
 import 'rope_config.dart';
@@ -90,7 +91,7 @@ class RopeEngine {
         if (since >= config.fallingBehindAfter) {
           candidate = RopeState.fallingBehind;
         } else if (missed >= config.weakMissedHeartbeats ||
-            (drop != null && drop >= config.weakRssiDropDb)) {
+            (drop != null && drop >= _effectiveWeakDropDb(t, now))) {
           t.weakSince ??= now;
           candidate = now.difference(t.weakSince!) >= config.weakSustainedForFallingBehind
               ? RopeState.fallingBehind
@@ -103,7 +104,7 @@ class RopeEngine {
 
       // Hysteresis: leaving an alerting state needs a few clean heartbeats.
       if (candidate.severity < t.state.severity &&
-          t.state.isAlerting &&
+          (t.state.isAlerting || t.state == RopeState.weak) &&
           t.heardSinceDegraded < config.recoveryHeartbeats) {
         candidate = t.state;
       }
@@ -112,7 +113,7 @@ class RopeEngine {
         events.add(RopeEvent(at: now, memberId: t.id, from: t.state, to: candidate));
         t.state = candidate;
         t.stateSince = now;
-        if (candidate.isAlerting) t.heardSinceDegraded = 0;
+        if (candidate.isAlerting || candidate == RopeState.weak) t.heardSinceDegraded = 0;
       }
 
       members[t.id] = RopeMemberState(
@@ -149,6 +150,24 @@ class RopeEngine {
     final newer = t.rssi.where((s) => !s.at.isBefore(mid)).map((s) => s.rssi).toList();
     if (older.length < 2 || newer.length < 2) return null;
     return _median(older) - _median(newer);
+  }
+
+  double _effectiveWeakDropDb(_Tracked t, DateTime now) {
+    final mid = now.subtract(config.rssiWindow ~/ 2);
+    final older = t.rssi.where((s) => s.at.isBefore(mid)).map((s) => s.rssi).toList();
+    final newer = t.rssi.where((s) => !s.at.isBefore(mid)).map((s) => s.rssi).toList();
+    if (older.length < 2 || newer.length < 2) return config.weakRssiDropDb.toDouble();
+    // Median absolute deviation is robust against isolated BLE reflections.
+    double jitter(List<int> xs) {
+      final middle = _median(xs);
+      final mad = _median(xs.map((v) => (v - middle).abs().round()).toList());
+      // MAD alone can become zero for odd-sized alternating samples.
+      // Consecutive step variation catches that failure mode.
+      final steps = <int>[for (var i = 1; i < xs.length; i++) (xs[i] - xs[i - 1]).abs()];
+      return math.max(mad, _median(steps) / 2);
+    }
+    final noise = math.max(jitter(older), jitter(newer));
+    return math.max(config.weakRssiDropDb.toDouble(), noise * config.rssiJitterMultiplier);
   }
 
   double _median(List<int> xs) {

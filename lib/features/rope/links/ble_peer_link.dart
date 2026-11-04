@@ -12,6 +12,7 @@ import '../engine/rope_models.dart';
 import 'peer_link.dart';
 import 'rope_packet.dart';
 import 'rope_roster.dart';
+import 'rope_safety_relay.dart';
 
 /// Cross-platform Bluetooth Low Energy transport for the Digital Rope.
 ///
@@ -81,6 +82,8 @@ class BlePeerLink implements PeerLink {
   final _obs = StreamController<PeerObservation>.broadcast();
   final _msg = StreamController<RopeMessage>.broadcast();
   final _syncState = StreamController<String>.broadcast();
+  final _safetyAlerts = StreamController<SafetyAlert>.broadcast();
+  SafetyAlertRelay? _safetyRelay;
   final List<StreamSubscription> _subs = [];
 
   GroupSession? _session;
@@ -139,6 +142,26 @@ class BlePeerLink implements PeerLink {
 
   /// Human-readable sync progress for the lobby ("Found organizer", "Joined as #3").
   Stream<String> get syncStatus => _syncState.stream;
+
+  /// Unseen automatic warnings, received either directly or via GATT relays.
+  Stream<SafetyAlert> get safetyAlerts => _safetyAlerts.stream;
+
+  /// Report a local state change to reachable peers without a manual SOS tap.
+  /// The local UI handles its own notification; this method handles delivery.
+  Future<void> broadcastSafetyAlert({required String subjectId, required SafetySignal signal}) async {
+    final s = _session;
+    final self = _self;
+    final relay = _safetyRelay;
+    if (_stopped || s == null || self == null || relay == null) return;
+    if (self.memberIndex < 0 || self.memberIndex >= 16) return;
+    final subject = s.members.where((m) => sameMember(m.id, subjectId)).firstOrNull;
+    if (subject == null || subject.memberIndex < 0 || subject.memberIndex >= 16) return;
+    relay.create(reporterIndex: self.memberIndex, subjectIndex: subject.memberIndex,
+        signal: signal, now: DateTime.now());
+    await _beat(); // Fast, one-hop BLE advertisement while signal still exists.
+    if (!_syncing) unawaited(_syncRound()); // GATT pushes beyond the first hop.
+  }
+
   @override
   bool get isSimulated => false;
 
@@ -188,6 +211,7 @@ class BlePeerLink implements PeerLink {
     _session = session;
     _self = self;
     _sessionHash = RopePacket.hashCode16(session.code);
+    _safetyRelay = SafetyAlertRelay(sessionHash: _sessionHash);
 
     _log('start code=${session.code} self=${self.displayName}#${self.memberIndex}');
     if (Platform.isAndroid) await _ensureAndroidPermissions();
@@ -247,6 +271,7 @@ class BlePeerLink implements PeerLink {
     _syncKickoff = null;
     _syncTimer?.cancel();
     _syncTimer = null;
+    _safetyRelay = null;
     for (final s in _subs) {
       await s.cancel();
     }
@@ -293,6 +318,7 @@ class BlePeerLink implements PeerLink {
 
   RopePacket _buildPacket() {
     final now = DateTime.now();
+    final safety = _safetyRelay?.localBeacon(now);
     final freshness = config.heartbeatInterval * 5;
     var gossip = 0;
     _recentDirect.forEach((idx, at) {
@@ -301,7 +327,9 @@ class BlePeerLink implements PeerLink {
     return RopePacket(
       sessionHash: _sessionHash,
       memberIndex: _self?.memberIndex ?? unassignedMemberIndex,
-      seq: _seq,
+      seq: safety?.sequence ?? _seq,
+      safetySignal: safety?.signal,
+      safetySubjectIndex: safety?.subjectIndex,
       flags: _pendingFlagBeats > 0 ? _pendingFlags : 0,
       gossip: gossip,
       starting: startAt != null && startAt!.isAfter(now),
@@ -357,6 +385,18 @@ class BlePeerLink implements PeerLink {
       onGroupEnd?.call();
     }
 
+    // Direct fast-path: warnings fit in the existing 8-byte heartbeat.
+    if (packet.safetySignal != null && packet.safetySubjectIndex != null) {
+      _receiveSafetyAlert(SafetyAlert(
+        sessionHash: _sessionHash,
+        reporterIndex: packet.memberIndex,
+        subjectIndex: packet.safetySubjectIndex!,
+        sequence: packet.seq,
+        signal: packet.safetySignal!,
+        createdAt: now,
+      ), now);
+    }
+
     _recentDirect[packet.memberIndex] = now;
     _lastHeard[sender.id] = now;
     _obs.add(PeerObservation(memberId: sender.id, at: now, rssi: e.rssi));
@@ -400,6 +440,12 @@ class BlePeerLink implements PeerLink {
 
   void _onRosterWrite(GATTCharacteristicWriteRequestedEventArgs e) {
     _peripheral.respondWriteRequest(e.request);
+    // Safety events share this write characteristic but never modify the roster.
+    final safety = SafetyAlert.fromBytes(e.request.value);
+    if (safety != null) {
+      _receiveSafetyAlert(safety, DateTime.now());
+      return;
+    }
     final join = JoinRequest.tryParse(e.request.value);
     final s = _session;
     final self = _self;
@@ -417,6 +463,21 @@ class BlePeerLink implements PeerLink {
     _log('join request from ${join.name} -> #$idx');
     _status('${join.name} joined as #$idx');
     onRosterChanged?.call(members, s.organizerId);
+  }
+
+  void _receiveSafetyAlert(SafetyAlert alert, DateTime now) {
+    if (_stopped) return;
+    final s = _session;
+    if (s == null) return;
+    // A 16-bit advertisement hash alone is not an identity credential: accept
+    // only known indices from this session. The BLE session itself still needs
+    // authenticated pairing before production safety guarantees are claimed.
+    if (!s.members.any((m) => m.memberIndex == alert.reporterIndex) ||
+        !s.members.any((m) => m.memberIndex == alert.subjectIndex)) return;
+    if (_safetyRelay?.accept(alert, now: now) != true) return;
+    if (!_safetyAlerts.isClosed) _safetyAlerts.add(alert);
+    // Advance newly learned warnings toward our other neighbours immediately.
+    if (!_syncing) unawaited(_syncRound());
   }
 
   /// Hard ceiling for one roster exchange (connect + discover + write + read + disconnect).
@@ -512,6 +573,15 @@ class BlePeerLink implements PeerLink {
             max = await _central.getMaximumWriteLength(peripheral, type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
           } catch (_) {}
           await _central.writeCharacteristic(peripheral, ch, value: join.toBytes(maxBytes: max.clamp(20, 180)), type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 8));
+        }
+        // Push a few distinct, bounded 12-byte warnings over the same GATT
+        // connection. Acknowledged writes and event IDs prevent relay loops;
+        // no extra platform characteristic or pairing flow is required.
+        final pending = _safetyRelay?.outgoing(DateTime.now(), limit: 3) ?? const <SafetyAlert>[];
+        for (final alert in pending) {
+          await _central.writeCharacteristic(peripheral, ch,
+            value: alert.toBytes(), type: GATTCharacteristicWriteType.withResponse)
+            .timeout(const Duration(seconds: 5));
         }
         final bytes = await _central.readCharacteristic(peripheral, ch).timeout(const Duration(seconds: 8));
         final readAt = DateTime.now();
@@ -614,6 +684,7 @@ class BlePeerLink implements PeerLink {
     _obs.close();
     _msg.close();
     _syncState.close();
+    _safetyAlerts.close();
   }
 }
 

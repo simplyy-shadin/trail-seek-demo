@@ -15,6 +15,7 @@ import 'engine/rope_engine.dart';
 import 'engine/rope_models.dart';
 import 'links/ble_peer_link.dart';
 import 'links/peer_link.dart';
+import 'links/rope_safety_relay.dart';
 import 'links/simulated_peer_link.dart';
 import 'rope_alerts.dart';
 import 'rope_log.dart';
@@ -241,6 +242,25 @@ class RopeController extends Notifier<RopeSessionState?> {
         }
       }
     }));
+    if (link is BlePeerLink) {
+      _subs.add(link.safetyAlerts.listen((alert) {
+        final current = state;
+        if (current == null || current.simulated) return;
+        final selfIndex = current.self?.memberIndex;
+        if (alert.reporterIndex == selfIndex) return; // Our own forwarded event.
+        final subject = current.session.members.where((m) => m.memberIndex == alert.subjectIndex).firstOrNull;
+        if (subject == null) return;
+        final to = switch (alert.signal) {
+          SafetySignal.weak => RopeState.weak,
+          SafetySignal.fallingBehind => RopeState.fallingBehind,
+          SafetySignal.separated => RopeState.separated,
+          SafetySignal.critical => RopeState.critical,
+          SafetySignal.recovered => RopeState.connected,
+        };
+        unawaited(RopeAlerts.instance.memberChanged(subject.displayName, to, memberId: subject.id));
+        debugPrint('[ROPE] relayed safety warning for ${subject.displayName}: ${alert.signal.name} hop=${alert.hops}');
+      }));
+    }
     _subs.add(link.messages.listen((m) {
       final s = state;
       if (s == null) return;
@@ -391,7 +411,23 @@ class RopeController extends Notifier<RopeSessionState?> {
       final e = events[i];
       final name = s.member(e.memberId)?.displayName ?? 'A member';
       debugPrint('[ROPE] state $name ${e.from.name} -> ${e.to.name}');
-      if (e.to.isAlerting || e.from.isAlerting) RopeAlerts.instance.memberChanged(name, e.to);
+      // Ignore members that have never been observed: during initial BLE
+      // joining their missing heartbeats are not evidence of separation.
+      if (!s.simulated && snap.members[e.memberId]?.lastSeen == null) continue;
+      if (e.to == RopeState.weak || e.to.isAlerting ||
+          e.from == RopeState.weak || e.from.isAlerting) {
+        unawaited(RopeAlerts.instance.memberChanged(name, e.to, memberId: e.memberId));
+        if (_link case final BlePeerLink link) {
+          final signal = switch (e.to) {
+            RopeState.weak => SafetySignal.weak,
+            RopeState.fallingBehind => SafetySignal.fallingBehind,
+            RopeState.separated => SafetySignal.separated,
+            RopeState.critical => SafetySignal.critical,
+            RopeState.connected => SafetySignal.recovered,
+          };
+          unawaited(link.broadcastSafetyAlert(subjectId: e.memberId, signal: signal));
+        }
+      }
     }
     _alertedEvents = events.length;
     if (snap.selfIsolated != _wasIsolated) {
