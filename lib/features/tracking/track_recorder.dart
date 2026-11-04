@@ -119,9 +119,22 @@ class TrackRecorder {
       // Indoors a stationary phone can wander many metres between fixes.
       // Wait until the displacement exceeds the reported GPS uncertainty,
       // then only count movement when it is also plausible over time.
+      // Adapt to the uncertainty of each GPS fix rather than using the
+      // same displacement threshold for every trek and every signal quality.
+      // Only relax the floor for *sustained* reported movement: a single
+      // noisy speed spike must not suddenly turn indoor drift into distance.
+      final sustainedMotion = prev.speedMps != null &&
+          p.speedMps != null &&
+          prev.speedMps!.isFinite &&
+          p.speedMps!.isFinite &&
+          prev.speedMps! >= movingSpeedMps &&
+          p.speedMps! >= movingSpeedMps;
+      final noiseFactor = sustainedMotion
+          ? accuracyMovementFactor * 0.8
+          : accuracyMovementFactor;
       final noiseFloor = math.max(
         minMovementM,
-        accuracyMovementFactor * math.max(prev.accuracyM, p.accuracyM),
+        noiseFactor * math.max(prev.accuracyM, p.accuracyM),
       );
       final reportedStationary = p.speedMps != null &&
           p.speedMps!.isFinite && p.speedMps! >= 0 &&
