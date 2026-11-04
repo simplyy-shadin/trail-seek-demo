@@ -22,6 +22,7 @@ class RopePacket {
     this.starting = false,
     this.requestStart = false,
     this.ending = false,
+    this.actionV2 = false,
     this.safetySubjectIndex,
     this.safetySignal,
   });
@@ -43,6 +44,9 @@ class RopePacket {
   /// The organizer is ending the trek for everyone.
   final bool ending;
 
+  /// Stable quick-action sequence identifier; legacy packets omit this bit.
+  final bool actionV2;
+
   /// Optional fast one-hop safety warning in otherwise unused packet bits.
   /// Full event identity and multi-hop forwarding use the GATT relay.
   final int? safetySubjectIndex;
@@ -62,7 +66,7 @@ class RopePacket {
     final code = safetySignal == null ? 0 : safetySignal!.index + 1;
     b.setUint8(4, (flags & 0x1F) | (code << 5));
     b.setUint16(5, gossip & 0xFFFF);
-    b.setUint8(7, (starting ? 1 : 0) | (requestStart ? 2 : 0) | (ending ? 4 : 0) |
+    b.setUint8(7, (starting ? 1 : 0) | (requestStart ? 2 : 0) | (ending ? 4 : 0) | (actionV2 ? 0x80 : 0) |
         (code == 0 ? 0 : ((safetySubjectIndex ?? 0) & 0x0F) << 3));
     return b.buffer.asUint8List();
   }
@@ -86,6 +90,7 @@ class RopePacket {
         starting: b.getUint8(7) & 1 == 1,
         requestStart: b.getUint8(7) & 2 == 2,
         ending: b.getUint8(7) & 4 == 4,
+        actionV2: (b.getUint8(7) & 0x80) != 0,
         safetySubjectIndex: code == 0 ? null : ((b.getUint8(7) >> 3) & 0x0F),
         safetySignal: code == 0 ? null : SafetySignal.values[code - 1],
       );
