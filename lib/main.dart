@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/group_secret_vault.dart';
 import 'app/backend.dart';
 import 'app/providers.dart';
 import 'app/router.dart';
@@ -25,6 +26,14 @@ Future<void> main() async {
   ));
   await Backend.init();
   final prefs = await SharedPreferences.getInstance();
+  // Load encryption keys before GroupSession.fromJson rehydrates stored groups.
+  // If Keychain/Keystore access fails, Bluetooth will fail closed; other app
+  // features remain usable.
+  try {
+    await GroupSecretVault.initialize();
+  } catch (e) {
+    debugPrint('[SECURITY] Group key vault unavailable: $e');
+  }
   AvatarFiles.root = Directory('${(await getApplicationDocumentsDirectory()).path}/avatars');
   await RopeAlerts.instance.init();
   runApp(
