@@ -36,6 +36,7 @@ class RopeSessionState {
     this.selfPositionAt,
     this.elapsed = Duration.zero,
     this.distanceKm = 0,
+    this.currentAltitudeM,
     this.log = const [],
     this.error,
     this.simulated = true,
@@ -56,6 +57,7 @@ class RopeSessionState {
   final DateTime? selfPositionAt;
   final Duration elapsed;
   final double distanceKm;
+  final double? currentAltitudeM;
   final List<RopeMessage> log;
   final String? error;
   final bool simulated;
@@ -78,8 +80,10 @@ class RopeSessionState {
 
   RopeState stateOf(String memberId) => snapshot?.members[memberId]?.state ?? RopeState.connected;
 
-  /// Rough elevation for the stats row: linear along the route.
-  int get elevationM {
+  /// Real trips use measured GPS altitude, never the adventure's advertised
+  /// elevation. Synthetic elevation is shown only for simulated sessions.
+  int? get elevationM {
+    if (!simulated) return currentAltitudeM?.round();
     final progress = (distanceKm * 1000 / route.lengthMetres).clamp(0.0, 1.0);
     return (adventure.elevationM - adventure.elevationGainM + adventure.elevationGainM * progress).round();
   }
@@ -96,6 +100,7 @@ class RopeSessionState {
         selfPositionAt: selfPositionAt,
         elapsed: elapsed,
         distanceKm: distanceKm,
+        currentAltitudeM: currentAltitudeM,
         log: log,
         error: error,
         simulated: simulated,
@@ -111,6 +116,7 @@ class RopeSessionState {
     DateTime? selfPositionAt,
     Duration? elapsed,
     double? distanceKm,
+    double? currentAltitudeM,
     List<RopeMessage>? log,
     String? error,
     bool clearError = false,
@@ -129,6 +135,7 @@ class RopeSessionState {
         selfPositionAt: selfPositionAt ?? this.selfPositionAt,
         elapsed: elapsed ?? this.elapsed,
         distanceKm: distanceKm ?? this.distanceKm,
+        currentAltitudeM: currentAltitudeM ?? this.currentAltitudeM,
         log: log ?? this.log,
         error: clearError ? null : (error ?? this.error),
         simulated: simulated,
@@ -150,9 +157,7 @@ class RopeController extends Notifier<RopeSessionState?> {
   PeerLink? _link;
   Timer? _ticker;
   final List<StreamSubscription> _subs = [];
-  GeoPoint? _lastGps;
-  double _gpsDistanceM = 0;
-  final List<TrackPoint> _ownTrack = [];
+  TrackRecorder _ownTrack = TrackRecorder();
 
   @override
   RopeSessionState? build() {
@@ -323,23 +328,30 @@ class RopeController extends Notifier<RopeSessionState?> {
   }
 
   void _onFix(geo.Position p, {bool countDistance = true}) {
-    final here = GeoPoint(p.latitude, p.longitude);
     _lastFixAt = DateTime.now();
-    if (countDistance) {
-      _ownTrack.add(TrackPoint(lat: p.latitude, lng: p.longitude, at: p.timestamp, altitudeM: p.altitude.isNaN ? null : p.altitude, accuracyM: p.accuracy));
+    // Do not present cached, invalid or inaccurate GPS as live tracking.
+    final age = DateTime.now().difference(p.timestamp).abs();
+    if (age > const Duration(seconds: 30) ||
+        !p.latitude.isFinite || !p.longitude.isFinite ||
+        !p.accuracy.isFinite || p.accuracy < 0 || p.accuracy > _ownTrack.maxAccuracyM) {
+      return;
     }
-    if (_link case final BlePeerLink l) l.updateSelfPosition(p.latitude, p.longitude, p.timestamp);
-    // Count distance only from usable fixes, so standing still does not add up GPS jitter.
-    if (countDistance && p.accuracy <= 30) {
-      if (_lastGps != null) {
-        final step = haversineMetres(_lastGps!, here);
-        if (step >= 2) {
-          _gpsDistanceM += step;
-          _lastGps = here;
-        }
-      } else {
-        _lastGps = here;
-      }
+
+    final fix = TrackPoint(
+      lat: p.latitude,
+      lng: p.longitude,
+      at: p.timestamp,
+      altitudeM: p.altitude.isFinite ? p.altitude : null,
+      accuracyM: p.accuracy,
+      speedMps: p.speed.isFinite && p.speed >= 0 ? p.speed : null,
+    );
+    final accepted = countDistance && _ownTrack.add(fix);
+    final anchor = countDistance ? _ownTrack.last : fix;
+    if (anchor == null) return;
+    final here = anchor.geo;
+    if (_link case final BlePeerLink l) {
+      // Relay a stable position rather than a rejected GPS jump.
+      l.updateSelfPosition(here.lat, here.lng, p.timestamp);
     }
     final s = state;
     if (s == null) return;
@@ -347,8 +359,9 @@ class RopeController extends Notifier<RopeSessionState?> {
     state = s.copyWith(
       selfPosition: here,
       selfPositionAt: p.timestamp,
-      distanceKm: _gpsDistanceM / 1000,
-      trails: selfId == null || !countDistance ? null : s.trailWith(selfId, here),
+      distanceKm: _ownTrack.distanceKm,
+      currentAltitudeM: _ownTrack.currentAltitudeM,
+      trails: selfId == null || !accepted ? null : s.trailWith(selfId, here),
     );
   }
 
@@ -430,8 +443,8 @@ class RopeController extends Notifier<RopeSessionState?> {
       durationSeconds: s.elapsed.inSeconds,
       memberCount: s.session.members.length,
       distanceKm: double.parse(s.distanceKm.toStringAsFixed(2)),
-      maxElevationM: s.adventure.elevationM,
-      elevationGainM: s.adventure.elevationGainM,
+      maxElevationM: s.simulated ? s.adventure.elevationM : (_ownTrack.maxAltitudeM?.round() ?? 0),
+      elevationGainM: s.simulated ? s.adventure.elevationGainM : _ownTrack.gainM,
       separationEvents: engine?.events.where((e) => e.to == RopeState.separated).length ?? 0,
       fallingBehindEvents: engine?.events.where((e) => e.to == RopeState.fallingBehind).length ?? 0,
       simulated: s.simulated,
@@ -462,10 +475,10 @@ class RopeController extends Notifier<RopeSessionState?> {
                 altitudeM: (s.adventure.elevationM - s.adventure.elevationGainM + s.adventure.elevationGainM * (i / 40) * sim.selfProgress).toDouble(),
               ),
           ]
-        : List<TrackPoint>.of(_ownTrack);
+        : List<TrackPoint>.of(_ownTrack.points);
     await ref.read(trackStoreProvider).save(
       'session-${s.session.id}',
-      TrackData(points: points, movingTime: s.elapsed, accuracyRatio: sim != null ? 0 : 1),
+      TrackData(points: points, movingTime: sim != null ? s.elapsed : _ownTrack.movingTime, accuracyRatio: sim != null ? 0 : _ownTrack.accuracyRatio),
     );
     await ref.read(activitiesProvider.notifier).add(ActivityRecord.fromSessionSummary(
       summary,
@@ -502,9 +515,7 @@ class RopeController extends Notifier<RopeSessionState?> {
     }
     _engine?.dispose();
     _engine = null;
-    _lastGps = null;
-    _gpsDistanceM = 0;
-    _ownTrack.clear();
+    _ownTrack = TrackRecorder();
     _alertedEvents = 0;
     _wasIsolated = false;
   }

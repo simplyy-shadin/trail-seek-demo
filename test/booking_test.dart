@@ -49,7 +49,7 @@ void main() {
   test('a booking round-trips through json', () {
     final b = Booking(
       id: 'x', code: 'ABC234', userId: 'u', userName: 'Shad', programId: 'peechi-nasika', programName: 'Nasika', destinationId: 'peechi-vazhani',
-      destinationName: 'Peechi', coverImage: null, date: DateTime(2026, 11, 2), slot: '08:00 AM', party: const Party(adults: 2),
+      destinationName: 'Peechi', coverImage: null, date: DateTime.now().add(const Duration(days: 7)), slot: '08:00 AM', party: const Party(adults: 2),
       lines: const [BookingLine('Ticket', 1200)], total: 1200, status: BookingStatus.confirmed, createdAt: DateTime(2026, 10, 28, 9),
       paymentMethod: 'UPI', paymentRef: 'TS1',
     );
