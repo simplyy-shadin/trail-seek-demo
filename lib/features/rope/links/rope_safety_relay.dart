@@ -110,7 +110,7 @@ class SafetyAlertRelay {
         alert.reporterIndex < 0 || alert.subjectIndex < 0 ||
         alert.hops > SafetyAlert.maxHops) return false;
     final age = now.toUtc().difference(alert.createdAt.toUtc());
-    if (age > lifetime || age < -futureTolerance) return false;
+    if (age > lifetime || age < const Duration(seconds: -30)) return false;
     prune(now);
     if (_seen.containsKey(alert.id)) return false;
     _seen[alert.id] = alert;
