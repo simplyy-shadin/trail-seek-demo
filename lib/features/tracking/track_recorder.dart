@@ -53,6 +53,8 @@ class TrackRecorder {
     this.gainThresholdM = 3,
     this.altitudeWindow = 5,
     this.movingSpeedMps = 0.5,
+    this.minMovementM = 5,
+    this.accuracyMovementFactor = 1.4,
   });
 
   final double maxAccuracyM;
@@ -60,6 +62,11 @@ class TrackRecorder {
   final double gainThresholdM;
   final int altitudeWindow;
   final double movingSpeedMps;
+
+  /// Suppress GPS wandering while a phone is stationary. Movement must
+  /// exceed both this floor and the uncertainty of the two fixes.
+  final double minMovementM;
+  final double accuracyMovementFactor;
 
   final List<TrackPoint> points = [];
   final List<double> _altBuffer = [];
@@ -72,6 +79,7 @@ class TrackRecorder {
   Duration movingTime = Duration.zero;
   int received = 0;
   int rejected = 0;
+  int ignored = 0;
 
   DateTime? get startedAt => points.isEmpty ? null : points.first.at;
   TrackPoint? get last => points.isEmpty ? null : points.last;
@@ -86,7 +94,10 @@ class TrackRecorder {
   /// Returns true when the point was accepted.
   bool add(TrackPoint p) {
     received++;
-    if (p.accuracyM > maxAccuracyM) {
+    if (!p.lat.isFinite || !p.lng.isFinite ||
+        p.lat.abs() > 90 || p.lng.abs() > 180 ||
+        !p.accuracyM.isFinite || p.accuracyM < 0 ||
+        p.accuracyM > maxAccuracyM) {
       rejected++;
       return false;
     }
@@ -103,8 +114,28 @@ class TrackRecorder {
         rejected++;
         return false;
       }
+      // Indoors a stationary phone can wander many metres between fixes.
+      // Wait until the displacement exceeds the reported GPS uncertainty,
+      // then only count movement when it is also plausible over time.
+      final noiseFloor = math.max(
+        minMovementM,
+        accuracyMovementFactor * math.max(prev.accuracyM, p.accuracyM),
+      );
+      final reportedStationary = p.speedMps != null &&
+          p.speedMps!.isFinite && p.speedMps! >= 0 &&
+          p.speedMps! < movingSpeedMps;
+      if (d < noiseFloor ||
+          (reportedStationary &&
+              d < math.max(noiseFloor, 2 * math.max(prev.accuracyM, p.accuracyM)))) {
+        // A stationary or too-small change is not a bad GPS fix; it just
+        // must not count toward distance or a drawn route.
+        ignored++;
+        return false;
+      }
       distanceM += d;
-      if (v >= movingSpeedMps) movingTime += Duration(milliseconds: (dt * 1000).round());
+      if (v >= movingSpeedMps) {
+        movingTime += Duration(milliseconds: (dt * 1000).round());
+      }
     }
     points.add(p);
     _updateAltitude(p.altitudeM);
@@ -145,6 +176,7 @@ class TrackRecorder {
         'movingMs': movingTime.inMilliseconds,
         'received': received,
         'rejected': rejected,
+        'ignored': ignored,
         'gainBase': _gainBase,
         'altBuf': _altBuffer,
       };
@@ -159,6 +191,7 @@ class TrackRecorder {
     r.movingTime = Duration(milliseconds: (j['movingMs'] as num).toInt());
     r.received = j['received'] as int;
     r.rejected = j['rejected'] as int;
+    r.ignored = (j['ignored'] as num?)?.toInt() ?? 0;
     r._gainBase = (j['gainBase'] as num?)?.toDouble();
     r._altBuffer.addAll(((j['altBuf'] as List?) ?? const []).map((e) => (e as num).toDouble()));
     return r;
