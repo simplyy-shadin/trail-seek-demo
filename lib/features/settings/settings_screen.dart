@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/group_secret_vault.dart';
 import '../../app/backend.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
@@ -141,6 +142,16 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
+    try {
+      await GroupSecretVault.clearAll();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not erase secure group credentials: $e')),
+        );
+      }
+      return; // Never report full deletion while group keys remain.
+    }
     await ref.read(localStoreProvider).wipeUserData();
     await ref.read(authProvider.notifier).signOut();
     ref.invalidate(activitiesProvider);
