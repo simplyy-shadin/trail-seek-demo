@@ -89,8 +89,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     }
     final pendingOrganizer = s.organizerId == 'pending';
     final joined = s.members.length;
-    final canStart = joined >= 2 && (s.simulated || (s.self?.memberIndex ?? 255) != 255);
-    final link = AppLinks.joinDeepLink(s.code);
+    final canStart = joined >= 2 && (s.simulated || (s.securityKey != null && (s.self?.memberIndex ?? 255) != 255));
+    final link = AppLinks.joinDeepLink(s.code, securityKey: s.securityKey);
     final startAt = s.simulated || sync.waiting ? null : sync.startAt;
     final organizerName = s.members.where((m) => m.id == s.organizerId).firstOrNull?.displayName ?? 'the organizer';
     final left = startAt?.difference(DateTime.now());
@@ -105,7 +105,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           IconButton(
             onPressed: () => SharePlus.instance.share(
               ShareParams(
-                text: AppLinks.groupInvite(groupName: s.name, adventureName: s.adventureName, date: DateFormat('d MMM').format(s.date), code: s.code),
+                text: AppLinks.groupInvite(groupName: s.name, adventureName: s.adventureName, date: DateFormat('d MMM').format(s.date), code: s.code, securityKey: s.securityKey),
               ),
             ),
             icon: const Icon(Icons.share),
@@ -122,10 +122,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Share this code with your friends to join the group.',
+            'Share the private QR invitation with trusted group members. The short code alone cannot authorize a real Bluetooth join.',
             textAlign: TextAlign.center,
             style: TextStyle(color: TsColors.muted),
           ),
+          if (!s.simulated && s.securityKey == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('This group predates secure invitations. Create a new real group before using Bluetooth.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orange)),
+            ),
           const SizedBox(height: 22),
           Center(
             child: Container(
@@ -137,8 +142,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           const SizedBox(height: 18),
           InkWell(
             onTap: () {
-              Clipboard.setData(ClipboardData(text: s.code));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied')));
+              Clipboard.setData(ClipboardData(text: s.simulated ? s.code : link));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitation copied')));
             },
             child: Column(
               children: [
@@ -147,7 +152,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 34, letterSpacing: 8, fontWeight: FontWeight.w900),
                 ),
-                const Text('tap to copy', style: TextStyle(fontSize: 11, color: TsColors.muted)),
+                Text(s.simulated ? 'tap to copy demo code' : 'tap to copy secure invitation', style: const TextStyle(fontSize: 11, color: TsColors.muted)),
               ],
             ),
           ),
