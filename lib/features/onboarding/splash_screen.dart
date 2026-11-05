@@ -30,7 +30,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1600),
     );
 
     _controller.forward().then((_) async {
@@ -84,8 +84,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           builder: (context, child) {
 
             // Reveal TrailSeek letter by letter.
-            final logoProgress =
-                (_controller.value / 0.78).clamp(0.0, 1.0);
+            final logoProgress = Curves.easeInOutCubic.transform(
+                 (_controller.value / 0.72).clamp(0.0, 1.0);
 
             const logo = 'TrailSeek';
 
@@ -97,7 +97,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
             // Reveal tagline after the wordmark.
             final taglineOpacity = Curves.easeOut.transform(
-              ((_controller.value - 0.78) / 0.22)
+              ((_controller.value - 0.72) / 0.28)
                   .clamp(0.0, 1.0),
             );
 
