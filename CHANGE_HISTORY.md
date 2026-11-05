@@ -13,7 +13,7 @@
 | Initial Flutter app | On `main` | [Baseline commit](https://github.com/simplyy-shadin/trail-seek-demo/commit/95c72293b5155f3d31533d5c7ee7f9a5802b026f) |
 | GPS drift and real elevation fix | Merged into `main` | [PR #1](https://github.com/simplyy-shadin/trail-seek-demo/pull/1) |
 | Automatic Bluetooth safety alerts | Merged into `main` | [PR #2](https://github.com/simplyy-shadin/trail-seek-demo/pull/2) |
-| Adaptive GPS threshold experiment | Pushed on separate branch; **NOT merged** | [Branch](https://github.com/simplyy-shadin/trail-seek-demo/tree/fix/adaptive-gps-noise-thresholds) |
+| Adaptive GPS threshold experiment | **Obsolete — safe to delete; NOT merged** | [Archived code commit](https://github.com/simplyy-shadin/trail-seek-demo/commit/2795ec7ee106196e53a0b0b8d49cabbe9cd8bc63) · [Branch (until deleted)](https://github.com/simplyy-shadin/trail-seek-demo/tree/fix/adaptive-gps-noise-thresholds) |
 | Manual SOS/STOP/WAIT multi-hop fix | **Merged into `main`; automated checks passed** | [PR #3](https://github.com/simplyy-shadin/trail-seek-demo/pull/3) |
 | BLE group authentication & privacy | **Merged into `main`; Android & iOS compile checks passed** | [PR #4](https://github.com/simplyy-shadin/trail-seek-demo/pull/4) |
 | Physical BLE / iOS lock-screen field tests | Pending | Automated unit tests are not hardware validation |
@@ -116,6 +116,7 @@
 - **Branch:** [`fix/adaptive-gps-noise-thresholds`](https://github.com/simplyy-shadin/trail-seek-demo/tree/fix/adaptive-gps-noise-thresholds)
 - **Branch head:** [`2795ec7`](https://github.com/simplyy-shadin/trail-seek-demo/commit/2795ec7ee106196e53a0b0b8d49cabbe9cd8bc63).
 - **Changed file:** [`lib/features/tracking/track_recorder.dart`](https://github.com/simplyy-shadin/trail-seek-demo/blob/2795ec7ee106196e53a0b0b8d49cabbe9cd8bc63/lib/features/tracking/track_recorder.dart). Changes the adaptive movement/noise threshold according to consecutive reported movement. For exact changed lines, open the linked commit diff. **Not merged and not represented as a tested `main` feature.**
+- **Decision (2026-11-05):** This experimental threshold reduction has no dedicated regression tests, and existing GPS filtering on `main` already fixes the original indoor-drift issue. **Not needed for the current build; do not merge. The branch may be deleted.** The GitHub integration available in this chat does not expose deleting a branch, so the remote ref stays until someone deletes it in GitHub. The source commit link above preserves a review reference.
 
 ## Update template for every subsequent push
 
