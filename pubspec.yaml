@@ -90,7 +90,7 @@ flutter:
     - assets/images/characters/
 
 
-      fonts:
+     fonts:
     - family: GreatVibes
       fonts:
         - asset: assets/fonts/Great_Vibes/GreatVibes-Regular.ttf
