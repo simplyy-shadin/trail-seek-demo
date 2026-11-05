@@ -17,7 +17,6 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
-
   static const Color neonGreen = Color(0xFF9DFF1E);
 
   late final AnimationController _controller;
@@ -82,10 +81,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-
-            // Reveal TrailSeek letter by letter.
+            // Smooth left-to-right wordmark reveal.
             final logoProgress = Curves.easeInOutCubic.transform(
-                 (_controller.value / 0.72).clamp(0.0, 1.0);
+              (_controller.value / 0.72).clamp(0.0, 1.0),
+            );
 
             const logo = 'TrailSeek';
 
@@ -95,7 +94,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             final visibleText =
                 logo.substring(0, visibleCharacters);
 
-            // Reveal tagline after the wordmark.
+            // Tagline fades in after the wordmark.
             final taglineOpacity = Curves.easeOut.transform(
               ((_controller.value - 0.72) / 0.28)
                   .clamp(0.0, 1.0),
@@ -105,7 +104,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
               child: Column(
                 children: [
-
                   const Spacer(flex: 4),
 
                   // TRAILSEEK WORDMARK
