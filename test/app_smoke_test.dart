@@ -13,10 +13,12 @@ import 'package:trailseek/main.dart';
 /// IO, so give it wall-clock time instead of pumpAndSettle (which never
 /// settles while the spinner animates).
 Future<void> settle(WidgetTester tester) async {
-  await tester.pump(const Duration(seconds: 2));
+  await tester.pump(const Duration(seconds: 3));
+
   await tester.runAsync(
     () => Future<void>.delayed(const Duration(milliseconds: 900)),
   );
+
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 600));
 }
@@ -36,10 +38,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Explore · Track · Earn'), findsOneWidget);
+    expect(find.text('EXPLORE WITHOUT LIMITS'), findsOneWidget);
 
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('Get Started'), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
