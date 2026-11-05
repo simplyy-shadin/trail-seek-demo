@@ -29,11 +29,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1400),
     );
 
     _controller.forward().then((_) async {
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 400));
       _decide();
     });
   }
@@ -81,23 +81,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-            // Smooth left-to-right wordmark reveal.
-            final logoProgress = Curves.easeInOutCubic.transform(
+            final logoProgress = Curves.easeOutCubic.transform(
               (_controller.value / 0.72).clamp(0.0, 1.0),
             );
 
-            const logo = 'TrailSeek';
-
-            final visibleCharacters =
-                (logo.length * logoProgress).floor();
-
-            final visibleText =
-                logo.substring(0, visibleCharacters);
-
-            // Tagline fades in after the wordmark.
             final taglineOpacity = Curves.easeOut.transform(
-              ((_controller.value - 0.72) / 0.28)
-                  .clamp(0.0, 1.0),
+              ((_controller.value - 0.72) / 0.28).clamp(0.0, 1.0),
             );
 
             return Padding(
@@ -106,19 +95,42 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 children: [
                   const Spacer(flex: 4),
 
-                  // TRAILSEEK WORDMARK
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      visibleText,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'GreatVibes',
-                        fontSize: 82,
-                        fontWeight: FontWeight.normal,
-                        color: neonGreen,
-                        height: 1.3,
-                      ),
+                  // CONTINUOUS WORDMARK REVEAL
+                  SizedBox(
+                    width: 340,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        const Text(
+                          'TrailSeek',
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontFamily: 'GreatVibes',
+                            fontSize: 82,
+                            color: Colors.transparent,
+                            height: 1.3,
+                          ),
+                        ),
+                        ClipRect(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: logoProgress,
+                            child: const Text(
+                              'TrailSeek',
+                              maxLines: 1,
+                              softWrap: false,
+                              style: TextStyle(
+                                fontFamily: 'GreatVibes',
+                                fontSize: 82,
+                                fontWeight: FontWeight.normal,
+                                color: neonGreen,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -144,7 +156,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   // EXISTING ACTIONS
                   AnimatedOpacity(
                     opacity: _showActions ? 1 : 0,
-                    duration: const Duration(milliseconds: 400),
+                    duration: const Duration(milliseconds: 350),
                     child: IgnorePointer(
                       ignoring: !_showActions,
                       child: Column(
@@ -153,12 +165,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             label: 'Get Started',
                             onPressed: () => _go('signup'),
                           ),
-
                           const SizedBox(height: 14),
-
                           Wrap(
-                            crossAxisAlignment:
-                                WrapCrossAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               const Text(
                                 'Already have an account? ',
