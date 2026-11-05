@@ -8,11 +8,12 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 
 class JoinGroupScreen extends ConsumerStatefulWidget {
-  const JoinGroupScreen({super.key, this.adventureId, this.prefillCode});
+  const JoinGroupScreen({super.key, this.adventureId, this.prefillCode, this.prefillKey});
   final String? adventureId;
 
   /// From a scanned QR / invite link: pre-filled and auto-submitted.
   final String? prefillCode;
+  final String? prefillKey;
   @override
   ConsumerState<JoinGroupScreen> createState() => _JoinGroupScreenState();
 }
@@ -21,10 +22,12 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
   final _code = TextEditingController();
   bool _simulated = false;
   bool _busy = false;
+  String? _inviteKey;
 
   @override
   void initState() {
     super.initState();
+    _inviteKey = widget.prefillKey;
     final c = widget.prefillCode?.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
     if (c != null && c.length == 6) {
       _code.text = c;
@@ -44,15 +47,35 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Codes are 6 characters.')));
       return;
     }
+    if (!_simulated && (_inviteKey == null ||
+        !RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(_inviteKey!))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('A secure QR invitation is required for real Bluetooth groups. Ask the organizer to share the QR.'),
+      ));
+      return;
+    }
     setState(() => _busy = true);
     final adventure = widget.adventureId == null ? null : await ref.read(adventureRepositoryProvider).byId(widget.adventureId!);
-    final session = await ref.read(groupProvider.notifier).join(code: c, adventure: adventure, simulated: _simulated);
-    if (!mounted) return;
-    context.pushReplacement('/group/${session.id}/lobby');
+    try {
+      final session = await ref.read(groupProvider.notifier).join(
+        code: c, adventure: adventure, simulated: _simulated,
+        securityKey: _simulated ? null : _inviteKey,
+      );
+      if (!mounted) return;
+      context.pushReplacement('/group/${session.id}/lobby');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cannot join securely: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _scan() async {
-    final result = await showModalBottomSheet<String>(
+    final result = await showModalBottomSheet<({String code, String? key})>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => SizedBox(
@@ -68,7 +91,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
                     final raw = capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
                     if (raw == null) return;
                     final code = extractJoinCode(raw);
-                    if (code != null && Navigator.canPop(ctx)) Navigator.pop(ctx, code);
+                    if (code != null && Navigator.canPop(ctx)) Navigator.pop(ctx, (code: code, key: extractJoinKey(raw)));
                   },
                 ),
               ),
@@ -78,8 +101,9 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
       ),
     );
     if (result != null) {
-      _code.text = result;
-      await _join(result);
+      _code.text = result.code;
+      _inviteKey = result.key;
+      await _join(result.code);
     }
   }
 
@@ -93,7 +117,7 @@ class _JoinGroupScreenState extends ConsumerState<JoinGroupScreen> {
         children: [
           const Text('Enter the team code', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text('Ask the organizer for the 6-character code or scan their QR.', style: TextStyle(color: TsColors.muted)),
+          const Text('Scan the organizer’s private QR to join a real group. A 6-character code alone works only for demos.', style: TextStyle(color: TsColors.muted)),
           const SizedBox(height: 20),
           TextField(
             controller: _code,
@@ -138,4 +162,11 @@ String? extractJoinCode(String raw) {
   final tagged = RegExp(r'(?:JOIN/|CODE:\s*)([A-Z0-9]{6})(?![A-Z0-9])').firstMatch(up);
   if (tagged != null) return tagged.group(1);
   return RegExp(r'(?<![A-Z0-9])([A-Z0-9]{6})(?![A-Z0-9])').firstMatch(up)?.group(1);
+}
+
+/// Reads the 256-bit group credential from a private QR/deep link.
+/// Never infer a secret from the short six-character discovery code.
+String? extractJoinKey(String raw) {
+  final m = RegExp(r'(?:[?&]key=)([0-9a-fA-F]{64})(?![0-9a-fA-F])', caseSensitive: false).firstMatch(raw);
+  return m?.group(1)?.toLowerCase();
 }

@@ -70,7 +70,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           return Uri(path: '/settings/ble', queryParameters: {for (final e in q.entries) e.key: e.value}).toString();
         }
         final code = state.uri.pathSegments.isNotEmpty ? state.uri.pathSegments.last : state.uri.queryParameters['code'];
-        if (code != null && code.isNotEmpty) return '/group/join?code=${Uri.encodeComponent(code)}';
+        if (code != null && code.isNotEmpty) {
+          return Uri(path: '/group/join', queryParameters: {
+            'code': code,
+            if (state.uri.queryParameters['key'] != null) 'key': state.uri.queryParameters['key']!,
+          }).toString();
+        }
         return '/home';
       }
       final signedIn = ref.read(authProvider) != null;
@@ -145,7 +150,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/group/create', builder: (_, s) => CreateGroupScreen(adventureId: s.uri.queryParameters['adventure'])),
-      GoRoute(path: '/group/join', builder: (_, s) => JoinGroupScreen(adventureId: s.uri.queryParameters['adventure'], prefillCode: s.uri.queryParameters['code'])),
+      GoRoute(path: '/group/join', builder: (_, s) => JoinGroupScreen(adventureId: s.uri.queryParameters['adventure'], prefillCode: s.uri.queryParameters['code'], prefillKey: s.uri.queryParameters['key'])),
       GoRoute(path: '/group/:id/lobby', builder: (_, s) => LobbyScreen(sessionId: s.pathParameters['id']!)),
       GoRoute(path: '/group/:id/checklist', builder: (_, s) => ChecklistScreen(sessionId: s.pathParameters['id']!)),
       GoRoute(path: '/group/:id/live', builder: (_, s) => LiveTrackingScreen(sessionId: s.pathParameters['id']!)),

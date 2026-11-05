@@ -53,17 +53,27 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       return;
     }
     setState(() => _busy = true);
-    final start = DateTime(_date.year, _date.month, _date.day, _start.hour, _start.minute);
-    final session = await ref.read(groupProvider.notifier).create(
-          name: _name.text,
-          adventure: a,
-          date: _date,
-          expectedStart: start,
-          plannedSize: _size,
-          simulated: _simulated,
+    try {
+      final start = DateTime(_date.year, _date.month, _date.day, _start.hour, _start.minute);
+      final session = await ref.read(groupProvider.notifier).create(
+            name: _name.text,
+            adventure: a,
+            date: _date,
+            expectedStart: start,
+            plannedSize: _size,
+            simulated: _simulated,
+          );
+      if (!mounted) return;
+      context.pushReplacement('/group/${session.id}/lobby');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not securely create group: $e')),
         );
-    if (!mounted) return;
-    context.pushReplacement('/group/${session.id}/lobby');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override

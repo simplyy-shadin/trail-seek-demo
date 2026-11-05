@@ -13,7 +13,9 @@ import 'peer_link.dart';
 import 'rope_packet.dart';
 import 'rope_roster.dart';
 import 'rope_action_relay.dart';
+import 'rope_control_frame.dart';
 import 'rope_safety_relay.dart';
+import 'rope_security.dart';
 
 /// Cross-platform Bluetooth Low Energy transport for the Digital Rope.
 ///
@@ -87,6 +89,11 @@ class BlePeerLink implements PeerLink {
   final _syncState = StreamController<String>.broadcast();
   final _safetyAlerts = StreamController<SafetyAlert>.broadcast();
   SafetyAlertRelay? _safetyRelay;
+  RopeSecurity? _security;
+  Uint8List? _rosterCipherCache;
+  DateTime? _rosterCacheAt;
+  final Map<int, DateTime> _lastHintSync = {};
+  int _controlSequence = 0;
   final List<StreamSubscription> _subs = [];
 
   GroupSession? _session;
@@ -213,6 +220,13 @@ class BlePeerLink implements PeerLink {
     _radioOwner = this;
     _session = session;
     _self = self;
+    // Never allow a legacy six-character-code group onto the real BLE radio.
+    if (!RopeSecurity.validKey(session.securityKey)) {
+      throw StateError('This group needs a secure QR invitation. Create a new real group.');
+    }
+    _security = RopeSecurity(session.securityKey!);
+    _rosterCipherCache = null;
+    _rosterCacheAt = null;
     _sessionHash = RopePacket.hashCode16(session.code);
     _actionRelay = RopeActionRelay(sessionHash: _sessionHash);
     _pendingActionSequence = null;
@@ -220,7 +234,7 @@ class BlePeerLink implements PeerLink {
     _pendingFlags = 0;
     _safetyRelay = SafetyAlertRelay(sessionHash: _sessionHash);
 
-    _log('start code=${session.code} self=${self.displayName}#${self.memberIndex}');
+    _log('start protected-group self=${self.displayName}#${self.memberIndex}');
     if (Platform.isAndroid) await _ensureAndroidPermissions();
     if (_abandoned) return;
     await _waitPoweredOn(_central);
@@ -281,6 +295,10 @@ class BlePeerLink implements PeerLink {
     _actionRelay = null;
     _pendingActionSequence = null;
     _safetyRelay = null;
+    _security = null;
+    _rosterCipherCache = null;
+    _rosterCacheAt = null;
+    _lastHintSync.clear();
     for (final s in _subs) {
       await s.cancel();
     }
@@ -395,27 +413,16 @@ class BlePeerLink implements PeerLink {
       _syncRound();
     }
 
-    if (packet.requestStart && self.memberIndex == 0) {
-      final last = _requestSeen[sender.id];
-      if (last == null || now.difference(last) > const Duration(seconds: 5)) onStartRequest?.call(sender);
-      _requestSeen[sender.id] = now;
-    }
-    if (packet.ending && packet.memberIndex == 0 && self.memberIndex != 0 && !_endSeen) {
-      _endSeen = true;
-      _log('organizer ended the trek');
-      onGroupEnd?.call();
-    }
-
-    // Direct fast-path: warnings fit in the existing 8-byte heartbeat.
-    if (packet.safetySignal != null && packet.safetySubjectIndex != null) {
-      _receiveSafetyAlert(SafetyAlert(
-        sessionHash: _sessionHash,
-        reporterIndex: packet.memberIndex,
-        subjectIndex: packet.safetySubjectIndex!,
-        sequence: packet.seq,
-        signal: packet.safetySignal!,
-        createdAt: now,
-      ), now);
+    // Advertisements contain no room for a cryptographic tag, so treat all
+    // manual actions, weak warnings and organizer controls as *untrusted hints*.
+    // Only the authenticated GATT frames below may vibrate, start or end a group.
+    if (packet.flags != 0 || packet.safetySignal != null ||
+        packet.requestStart || packet.ending) {
+      final previous = _lastHintSync[packet.memberIndex];
+      if (previous == null || now.difference(previous) > const Duration(seconds: 3)) {
+        _lastHintSync[packet.memberIndex] = now;
+        if (!_syncing) unawaited(_syncRound());
+      }
     }
 
     _recentDirect[packet.memberIndex] = now;
@@ -430,26 +437,8 @@ class BlePeerLink implements PeerLink {
       }
     }
 
-    // V2 packets repeat the same event sequence while advertising.
-    // Deliver only one notification for each origin/sequence pair.
-    final type = switch (packet.flags) {
-      RopePacket.flagImOk => RopeMessageType.imOk,
-      RopePacket.flagWaitForMe => RopeMessageType.waitForMe,
-      RopePacket.flagNeedHelp => RopeMessageType.needHelp,
-      RopePacket.flagGroupAlert => RopeMessageType.groupAlert,
-      RopePacket.flagStopGroup => RopeMessageType.stopGroup,
-      _ => null,
-    };
-    if (type != null && packet.actionV2) {
-      _receiveAction(RopeActionFrame(
-        sessionHash: _sessionHash, originIndex: packet.memberIndex,
-        sequence: packet.seq, type: type, sentAt: now,
-      ), now);
-    } else if (type != null && _lastFlags[packet.memberIndex] != packet.flags) {
-      // Legacy packets have no stable event ID. Display one direct message,
-      // but never synthesize relay IDs from changing heartbeat counters.
-      _msg.add(RopeMessage(type: type, fromMemberId: sender.id, at: now));
-    }
+    // No action is dispatched from the unauthenticated advertising local name.
+    // Full HMAC-protected GATT frames produce notifications in _onRosterWrite.
     _lastFlags[packet.memberIndex] = packet.flags;
   }
 
@@ -461,26 +450,60 @@ class BlePeerLink implements PeerLink {
     return RosterSnapshot.fromSession(s, sessionHash: _sessionHash, lastHeard: _lastHeard, now: DateTime.now(), positions: _positions, startAt: startAt).toBytes();
   }
 
+  Future<Uint8List?> _encryptedRosterBytes() async {
+    final security = _security;
+    if (security == null) return null;
+    final now = DateTime.now();
+    if (_rosterCipherCache != null && _rosterCacheAt != null &&
+        now.difference(_rosterCacheAt!) < const Duration(seconds: 5)) {
+      return _rosterCipherCache;
+    }
+    final data = await security.encryptRoster(_rosterBytes());
+    _rosterCipherCache = data;
+    _rosterCacheAt = now;
+    return data;
+  }
+
   void _onRosterRead(GATTCharacteristicReadRequestedEventArgs e) {
-    final bytes = _rosterBytes();
-    final offset = e.request.offset.clamp(0, bytes.length);
-    _peripheral.respondReadRequestWithValue(e.request, value: bytes.sublist(offset));
+    unawaited(_replyEncryptedRoster(e));
+  }
+
+  Future<void> _replyEncryptedRoster(GATTCharacteristicReadRequestedEventArgs e) async {
+    try {
+      final bytes = await _encryptedRosterBytes();
+      if (_stopped || bytes == null) return;
+      final offset = e.request.offset.clamp(0, bytes.length);
+      _peripheral.respondReadRequestWithValue(e.request, value: bytes.sublist(offset));
+    } catch (error) {
+      _log('encrypted roster response failed: $error');
+      // Fail closed: never fall back to an unencrypted roster.
+    }
   }
 
   void _onRosterWrite(GATTCharacteristicWriteRequestedEventArgs e) {
     _peripheral.respondWriteRequest(e.request);
-    final action = RopeActionFrame.fromBytes(e.request.value);
+    final payload = _security?.verifyMessage(e.request.value);
+    if (payload == null) {
+      _log('rejected unauthenticated BLE write');
+      return;
+    }
+    final control = RopeControlFrame.fromBytes(payload, now: DateTime.now());
+    if (control != null) {
+      _receiveControl(control);
+      return;
+    }
+    final action = RopeActionFrame.fromBytes(payload);
     if (action != null) {
       _receiveAction(action, DateTime.now());
       return;
     }
     // Safety events share this write characteristic but never modify the roster.
-    final safety = SafetyAlert.fromBytes(e.request.value);
+    final safety = SafetyAlert.fromBytes(payload);
     if (safety != null) {
       _receiveSafetyAlert(safety, DateTime.now());
       return;
     }
-    final join = JoinRequest.tryParse(e.request.value);
+    final join = JoinRequest.tryParse(payload);
     final s = _session;
     final self = _self;
     if (join == null || s == null || self == null) return;
@@ -497,6 +520,26 @@ class BlePeerLink implements PeerLink {
     _log('join request from ${join.name} -> #$idx');
     _status('${join.name} joined as #$idx');
     onRosterChanged?.call(members, s.organizerId);
+  }
+
+  void _receiveControl(RopeControlFrame control) {
+    final s = _session;
+    final self = _self;
+    if (s == null || self == null) return;
+    final member = s.members.where((m) => m.memberIndex == control.originIndex).firstOrNull;
+    if (member == null) return;
+    if (control.type == RopeControlType.requestStart && self.memberIndex == 0 &&
+        control.originIndex != 0) {
+      final last = _requestSeen[member.id];
+      if (last == null || DateTime.now().difference(last) > const Duration(seconds: 5)) {
+        onStartRequest?.call(member);
+      }
+      _requestSeen[member.id] = DateTime.now();
+    } else if (control.type == RopeControlType.endGroup &&
+        control.originIndex == 0 && self.memberIndex != 0 && !_endSeen) {
+      _endSeen = true;
+      onGroupEnd?.call();
+    }
   }
 
   void _receiveSafetyAlert(SafetyAlert alert, DateTime now) {
@@ -624,7 +667,32 @@ class BlePeerLink implements PeerLink {
           try {
             max = await _central.getMaximumWriteLength(peripheral, type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
           } catch (_) {}
-          await _central.writeCharacteristic(peripheral, ch, value: join.toBytes(maxBytes: max.clamp(20, 180)), type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 8));
+          final security = _security;
+          if (security == null) return;
+          final joined = security.signMessage(join.toBytes(maxBytes: (max - 17).clamp(20, 180)));
+          if (joined.length > max) {
+            _status('This phone GATT MTU is too small for secure join.');
+            return;
+          }
+          await _central.writeCharacteristic(peripheral, ch,
+            value: joined, type: GATTCharacteristicWriteType.withResponse)
+            .timeout(const Duration(seconds: 8));
+        }
+        // Organizer/member control must also be MAC-protected; the
+        // corresponding advertising bits only request an early sync.
+        if (self.memberIndex != unassignedMemberIndex &&
+            (requestingStart || ending)) {
+          final kind = ending ? RopeControlType.endGroup : RopeControlType.requestStart;
+          final control = RopeControlFrame(
+            type: kind,
+            originIndex: self.memberIndex,
+            sequence: _controlSequence++ & 0xFF,
+            createdAt: DateTime.now(),
+          );
+          await _central.writeCharacteristic(peripheral, ch,
+            value: _security!.signMessage(control.toBytes()),
+            type: GATTCharacteristicWriteType.withResponse)
+            .timeout(const Duration(seconds: 5));
         }
         // Push a few distinct, bounded 12-byte warnings over the same GATT
         // connection. Acknowledged writes and event IDs prevent relay loops;
@@ -632,7 +700,7 @@ class BlePeerLink implements PeerLink {
         final pending = _safetyRelay?.outgoing(DateTime.now(), limit: 3) ?? const <SafetyAlert>[];
         for (final alert in pending) {
           await _central.writeCharacteristic(peripheral, ch,
-            value: alert.toBytes(), type: GATTCharacteristicWriteType.withResponse)
+            value: _security!.signMessage(alert.toBytes()), type: GATTCharacteristicWriteType.withResponse)
             .timeout(const Duration(seconds: 5));
         }
         // A GATT response confirms only this neighbour received the frame.
@@ -641,13 +709,18 @@ class BlePeerLink implements PeerLink {
             ?? const <RopeActionFrame>[];
         for (final action in actions) {
           await _central.writeCharacteristic(
-            peripheral, ch, value: action.toBytes(),
+            peripheral, ch, value: _security!.signMessage(action.toBytes()),
             type: GATTCharacteristicWriteType.withResponse,
           ).timeout(const Duration(seconds: 5));
         }
         final bytes = await _central.readCharacteristic(peripheral, ch).timeout(const Duration(seconds: 8));
+        final cleartext = await _security?.decryptRoster(bytes);
+        if (cleartext == null) {
+          _log('rejected unauthenticated roster snapshot');
+          return;
+        }
         final readAt = DateTime.now();
-        final snap = RosterSnapshot.fromBytes(bytes);
+        final snap = RosterSnapshot.fromBytes(cleartext);
         if (snap.sessionHash != _sessionHash) return;
         _applyRoster(snap, readAt: readAt, fromOrganizer: fromOrganizer || (snap.organizer != null && sameMember(snap.organizer!.id, s.organizerId)));
       } finally {

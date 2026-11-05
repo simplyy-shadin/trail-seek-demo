@@ -100,6 +100,11 @@ void main() {
     expect(find.text('3 / 10 Members Joined'), findsOneWidget);
     expect(find.text('Add demo members'), findsOneWidget);
     expect(find.text('Start Adventure'), findsOneWidget);
+    // The secure invite notice lengthens the lobby above the member list.
+    await tester.scrollUntilVisible(
+      find.text('Fayaz FF (you)'), 250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Fayaz FF (you)'), findsOneWidget);
   });
 
