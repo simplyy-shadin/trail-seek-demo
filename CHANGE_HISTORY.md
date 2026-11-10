@@ -6,6 +6,16 @@
 >
 > **Updating policy:** On each **future push I make** to Trailseek, update this history alongside the code, including new/modified file names, changed lines, summary, test status and commit/PR references. Pushes made by other people are not captured automatically. Do not record untested code as field-tested.
 
+## 2026-11-10 — SmartTrace battery-balanced GPS improvement (PR #5 follow-up)
+
+- **Goal:** Improve small outdoor-turn sampling and stationary-marker stability while reducing needless GPS and Bluetooth work. This does *not* turn GPS into a metre-accurate indoor locator.
+- **`lib/features/tracking/position_stream.dart`:** Android balanced 2-second, 2-metre, high-accuracy requests instead of 1-second/0-metre best accuracy; disable explicit foreground CPU wake lock while keeping foreground notification. iOS remains `best` accuracy with 3-metre distance filter, fitness activity mode and active-session background location. Platform-specific battery and lock-screen behavior must be checked in the field.
+- **`lib/features/tracking/track_recorder.dart`:** Use a 2.5m minimum movement step *only* when reported walking and horizontal accuracy <= 6m, otherwise keep existing 5m floor. Avoid extra sensor polling, full Kalman/IMU dead reckoning, or increasing GPS frequency without evidence.
+- **`lib/features/tracking/tracking_controller.dart`:** Reject >30s stale position timestamps and keep the live marker at the last accepted route position rather than showing rejected GPS jitter.
+- **`lib/features/rope/rope_controller.dart`:** Share and timestamp only accepted GPS anchors instead of falsely refreshing a rejected coordinate; helps avoid stale BLE spacing warnings and reduces unnecessary position processing.
+- **`test/track_recorder_test.dart`:** Regression cases for tight good-GNSS turns versus poor-GNSS tiny movement.
+- **Verification:** Static code review performed; Flutter SDK not present in this environment, so Flutter tests/builds and battery profiling **not run locally**. Await CI and real iPhone/Android locked-screen trials. Do not claim measurable battery-life improvement yet.
+
 ## Latest status
 
 | Item | Status | Reference |

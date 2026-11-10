@@ -377,7 +377,6 @@ class RopeController extends Notifier<RopeSessionState?> {
   }
 
   void _onFix(geo.Position p, {bool countDistance = true}) {
-    _lastFixAt = DateTime.now();
     // Do not present cached, invalid or inaccurate GPS as live tracking.
     final age = DateTime.now().difference(p.timestamp).abs();
     if (age > const Duration(seconds: 30) ||
@@ -385,8 +384,8 @@ class RopeController extends Notifier<RopeSessionState?> {
         !p.accuracy.isFinite || p.accuracy < 0 || p.accuracy > _ownTrack.maxAccuracyM) {
       return;
     }
+    _lastFixAt = DateTime.now();
 
-    _selfAccuracyM = p.accuracy;
     final fix = TrackPoint(
       lat: p.latitude,
       lng: p.longitude,
@@ -399,16 +398,22 @@ class RopeController extends Notifier<RopeSessionState?> {
     final anchor = countDistance ? _ownTrack.last : fix;
     if (anchor == null) return;
     final here = anchor.geo;
-    if (_link case final BlePeerLink l when ref.read(settingsProvider).shareLocationInGroups) {
-      // Relay a stable position rather than a rejected GPS jump.
-      l.updateSelfPosition(here.lat, here.lng, p.timestamp);
+    // Preserve the timestamp/accuracy of the *accepted* fix. Refreshing an
+    // old anchor with the rejected sample's timestamp would make stale GPS
+    // appear fresh and could trigger an incorrect distance warning.
+    _selfAccuracyM = anchor.accuracyM;
+    if (accepted || !countDistance) {
+      if (_link case final BlePeerLink l when ref.read(settingsProvider).shareLocationInGroups) {
+        // Avoid redundant BLE roster updates for indoor GPS jitter.
+        l.updateSelfPosition(here.lat, here.lng, anchor.at);
+      }
     }
     final s = state;
     if (s == null) return;
     final selfId = s.self?.id;
     state = s.copyWith(
       selfPosition: here,
-      selfPositionAt: p.timestamp,
+      selfPositionAt: anchor.at,
       distanceKm: _ownTrack.distanceKm,
       currentAltitudeM: _ownTrack.currentAltitudeM,
       trails: selfId == null || !accepted ? null : s.trailWith(selfId, here),

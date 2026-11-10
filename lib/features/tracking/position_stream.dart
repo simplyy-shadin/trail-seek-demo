@@ -10,25 +10,32 @@ import 'ref_counted_broadcast_stream.dart';
 /// share it so two sessions never open two location streams.
 ///
 /// On Android this runs inside a foreground service with a persistent
-/// notification, which is what keeps fixes flowing with the screen off.
+/// notification while actively trekking. Balanced GPS requests avoid a
+/// one-second/no-distance-filter busy stream and a permanent CPU wake lock.
+/// Keep location active during a trek so safety doesn't depend on an app
+/// waking from a GPS pause. Measure screen-locked reliability on real devices.
 final positionStreamProvider = Provider<Stream<geo.Position>>((ref) {
   final settings = switch (defaultTargetPlatform) {
     TargetPlatform.android => geo.AndroidSettings(
-        accuracy: geo.LocationAccuracy.best,
-        // Every 1 s fix reaches the recorder (as FitzTrack does); it decides
-        // what is movement, so small turns are not dropped by the OS.
-        distanceFilter: 0,
-        intervalDuration: const Duration(seconds: 1),
+        accuracy: geo.LocationAccuracy.high,
+        // Balanced acquisition: short turns still reach the adaptive recorder
+        // without requesting continuous 1 Hz GNSS updates while stationary.
+        distanceFilter: 2,
+        intervalDuration: const Duration(seconds: 2),
         foregroundNotificationConfig: const geo.ForegroundNotificationConfig(
           notificationTitle: 'Trail Seek is recording',
           notificationText: 'Keeping your track while the screen is off',
           notificationChannelName: 'Activity recording',
-          enableWakeLock: true,
+          // Foreground service remains; avoid holding a CPU lock for the
+          // entire trek. Verify background behavior on each Android model.
+          enableWakeLock: false,
           setOngoing: true,
           notificationIcon: geo.AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
         ),
       ),
     TargetPlatform.iOS || TargetPlatform.macOS => geo.AppleSettings(
+        // iPhone field testing is prioritized: preserve best GNSS precision
+        // but allow the OS to coalesce sub-three-metre location noise.
         accuracy: geo.LocationAccuracy.best,
         distanceFilter: 3,
         activityType: geo.ActivityType.fitness,

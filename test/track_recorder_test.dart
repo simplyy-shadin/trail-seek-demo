@@ -184,4 +184,35 @@ void main() {
     expect(r.distanceM, lessThan(400)); // the 2 km jump is not walked distance
     expect(r.distanceM, greaterThan(250));
   });
+  test('good fixes preserve small C-turn corners without extra GPS polling', () {
+    final r = TrackRecorder();
+    final at = DateTime.utc(2026, 11, 10, 12);
+    // 2.7m east then 2.7m north, repeated. A fixed 5m floor can skip
+    // the bend; a quality-aware floor keeps both legs if accuracy is good.
+    final coords = [
+      const GeoPoint(10.30, 76.50),
+      const GeoPoint(10.30, 76.500025),
+      const GeoPoint(10.300025, 76.500025),
+      const GeoPoint(10.300025, 76.500050),
+      const GeoPoint(10.300050, 76.500050),
+    ];
+    for (var i = 0; i < coords.length; i++) {
+      r.add(TrackPoint(lat: coords[i].lat, lng: coords[i].lng,
+          at: at.add(Duration(seconds: i * 3)), accuracyM: 3, speedMps: 1));
+    }
+    expect(r.points.length, coords.length);
+    expect(r.distanceM, greaterThan(10));
+  });
+
+  test('no extra tiny steps under poor canopy accuracy', () {
+    final r = TrackRecorder();
+    final at = DateTime.utc(2026, 11, 10, 12);
+    expect(r.add(TrackPoint(lat: 10.3, lng: 76.5, at: at,
+        accuracyM: 15, speedMps: 1)), isTrue);
+    expect(r.add(TrackPoint(lat: 10.3, lng: 76.500025,
+        at: at.add(const Duration(seconds: 3)),
+        accuracyM: 15, speedMps: 1)), isFalse);
+    expect(r.points.length, 1);
+  });
+
 }

@@ -62,6 +62,8 @@ class TrackRecorder {
     this.altitudeWindow = 5,
     this.movingSpeedMps = 0.5,
     this.minMovementM = 5,
+    this.preciseMovementM = 2.5,
+    this.preciseAccuracyM = 6,
     this.accuracyMovementFactor = 1.0,
     this.maxConsecutiveSpeedRejects = 5,
   });
@@ -80,6 +82,11 @@ class TrackRecorder {
   /// Suppress GPS wandering while a phone is stationary. Movement must
   /// exceed both this floor and the uncertainty of the two fixes.
   final double minMovementM;
+
+  /// Record finer hairpins only when both fixes have good GNSS accuracy and
+  /// the phone reports walking. No continuous accelerometer polling is needed.
+  final double preciseMovementM;
+  final double preciseAccuracyM;
   final double accuracyMovementFactor;
 
   final List<TrackPoint> points = [];
@@ -144,7 +151,11 @@ class TrackRecorder {
       // noise: trust it to tell walking from standing.
       final double floor;
       if (speed != null && speed >= movingSpeedMps) {
-        floor = minMovementM; // walking: keep every turn
+        // Good satellite fixes can preserve tighter S/C corners. Under a
+        // canopy, keep the 5 m floor to avoid turning noise into fake trails.
+        floor = uncertainty <= preciseAccuracyM
+            ? math.min(minMovementM, preciseMovementM)
+            : minMovementM;
       } else if (speed != null) {
         floor = math.max(minMovementM, 2 * uncertainty); // standing: ignore drift
       } else {

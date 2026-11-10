@@ -184,7 +184,11 @@ class TrackingController extends Notifier<TrackingState> {
 
   void _onPosition(geo.Position p) {
     if (state.status != TrackingStatus.recording) return;
-    final moving = !p.speed.isNaN && p.speed >= 0.5;
+    // Ignore delayed/cached GNSS readings. Otherwise a freshly opened app
+    // may display an old coordinate as the trekker's live position.
+    if (DateTime.now().difference(p.timestamp).abs() >
+        const Duration(seconds: 30)) return;
+    final moving = p.speed.isFinite && p.speed >= 0.5;
     if (moving || _movingAt == null) _movingAt = p.timestamp;
     final point = TrackPoint(
       lat: p.latitude,
@@ -196,7 +200,9 @@ class TrackingController extends Notifier<TrackingState> {
     );
     final accepted = _recorder.add(point);
     state = state.copyWith(
-      lastPosition: point.geo,
+      // A rejected or stationary-jitter fix must not move the live marker.
+      // Raw horizontal accuracy is still surfaced for a weak-GPS warning.
+      lastPosition: _recorder.last?.geo,
       accuracyM: p.accuracy,
       distanceM: _recorder.distanceM,
       gainM: _recorder.gainM,
