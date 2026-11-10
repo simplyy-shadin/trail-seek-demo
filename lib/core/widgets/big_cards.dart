@@ -127,12 +127,14 @@ class PillField extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
         child: Row(
           children: [
-            const Icon(Icons.search, size: 18, color: Colors.black87),
+            // A picker, not a search box: place icon and a drop-down arrow.
+            const Icon(Icons.place_outlined, size: 18, color: Colors.black87),
             const SizedBox(width: 8),
             Expanded(
               child: Text(value ?? hint, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: value == null ? TextAlign.center : TextAlign.start,
                   style: TextStyle(color: value == null ? Colors.black38 : Colors.black, fontStyle: value == null ? FontStyle.italic : FontStyle.normal, fontWeight: value == null ? FontWeight.w400 : FontWeight.w700)),
             ),
+            const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.black54),
           ],
         ),
       ),

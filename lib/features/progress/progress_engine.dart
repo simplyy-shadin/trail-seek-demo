@@ -27,7 +27,8 @@ class ProgressEngine {
     var totalXp = 0;
 
     for (final r in ordered) {
-      if (r.isTrivial) {
+      // Demo treks (pretend members) and two-minute strolls earn nothing.
+      if (r.isTrivial || r.simulated) {
         xpBy[r.id] = 0;
         continue;
       }

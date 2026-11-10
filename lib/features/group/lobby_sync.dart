@@ -120,7 +120,9 @@ class LobbySyncController extends Notifier<LobbySyncState> {
       state = state.copyWith(status: session.selfIsOrganizer ? 'Waiting for members nearby…' : 'Searching for your group nearby…');
     } catch (e) {
       debugPrint('[LOBBY] start failed: $e');
-      state = state.copyWith(running: false, error: e.toString());
+      // Drop the failed radio so "Try again" really starts over.
+      await _release();
+      if (ref.mounted) state = LobbySyncState(error: e.toString());
     }
   }
 

@@ -15,6 +15,7 @@ class RopeSecurity {
 
   static const rosterMagic = 0xB5;
   static const messageMagic = 0xB6;
+  static const trailMagic = 0xB7;
   static const tagBytes = 16;
   static const nonceBytes = 12;
   static const encryptedRosterOverhead = 1 + nonceBytes + tagBytes;
@@ -67,24 +68,33 @@ class RopeSecurity {
 
   /// AES-256-GCM with random nonce: an arbitrary BLE reader gets ciphertext,
   /// not names, locations, or the group's code.
-  Future<Uint8List> encryptRoster(Uint8List plaintext) async {
+  Future<Uint8List> encryptRoster(Uint8List plaintext) => _seal(plaintext, rosterMagic, 'trailseek-ble-roster-v2');
+
+  /// Returns null for corrupt, unknown-version, or unauthenticated rosters.
+  Future<Uint8List?> decryptRoster(Uint8List data) => _open(data, rosterMagic, 'trailseek-ble-roster-v2');
+
+  /// Walked-path pages (every member's breadcrumbs) get the same protection.
+  Future<Uint8List> encryptTrail(Uint8List plaintext) => _seal(plaintext, trailMagic, 'trailseek-ble-trail-v1');
+
+  Future<Uint8List?> decryptTrail(Uint8List data) => _open(data, trailMagic, 'trailseek-ble-trail-v1');
+
+  Future<Uint8List> _seal(Uint8List plaintext, int magic, String label) async {
     if (plaintext.length > maxRosterPlaintextBytes) {
-      throw ArgumentError('Roster exceeds encrypted GATT attribute budget');
+      throw ArgumentError('Payload exceeds encrypted GATT attribute budget');
     }
     final nonce = _aes.newNonce();
     final box = await _aes.encrypt(
       plaintext,
       secretKey: SecretKey(_keyBytes),
       nonce: nonce,
-      aad: utf8.encode('trailseek-ble-roster-v2'),
+      aad: utf8.encode(label),
     );
-    return Uint8List.fromList([rosterMagic, ...box.nonce, ...box.cipherText, ...box.mac.bytes]);
+    return Uint8List.fromList([magic, ...box.nonce, ...box.cipherText, ...box.mac.bytes]);
   }
 
-  /// Returns null for corrupt, unknown-version, or unauthenticated rosters.
-  Future<Uint8List?> decryptRoster(Uint8List data) async {
+  Future<Uint8List?> _open(Uint8List data, int magic, String label) async {
     if (data.length < encryptedRosterOverhead || data.length > 512 ||
-        data.first != rosterMagic) return null;
+        data.first != magic) return null;
     try {
       final box = SecretBox(
         data.sublist(1 + nonceBytes, data.length - tagBytes),
@@ -93,7 +103,7 @@ class RopeSecurity {
       );
       final plain = await _aes.decrypt(
         box, secretKey: SecretKey(_keyBytes),
-        aad: utf8.encode('trailseek-ble-roster-v2'),
+        aad: utf8.encode(label),
       );
       return Uint8List.fromList(plain);
     } on SecretBoxAuthenticationError {

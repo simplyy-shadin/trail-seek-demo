@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -72,7 +74,12 @@ class RopeAlerts {
     return true;
   }
 
+  /// Settings → Group alerts off: only safety alarms (separated, critical,
+  /// SOS, Stop, you are left behind) still notify.
+  bool quiet = false;
+
   Future<void> memberChanged(String memberName, RopeState to, {String? memberId}) async {
+    if (quiet && (to == RopeState.weak || to == RopeState.fallingBehind || to == RopeState.connected)) return;
     final key = memberId ?? memberName;
     final now = DateTime.now();
     final previous = _lastState[key];
@@ -94,7 +101,9 @@ class RopeAlerts {
       RopeState.critical => ('CRITICAL: $memberName missing', 'No reconnection in the escalation window. Stop the group now.'),
       _ => ('', ''),
     };
-    await _buzz(strong: to == RopeState.separated || to == RopeState.critical);
+    // Display the OS notification immediately; the haptic sequence must not
+    // delay a locked phone's alert by up to 1.5 seconds.
+    unawaited(_buzz(strong: to == RopeState.separated || to == RopeState.critical));
     await _show(notificationId, title, body, critical: to == RopeState.critical, alarm: to == RopeState.separated || to == RopeState.critical);
   }
 
@@ -104,13 +113,34 @@ class RopeAlerts {
       await _cancel(id);
       return;
     }
-    await _buzz(strong: true);
+    unawaited(_buzz(strong: true));
     await _show(id, 'Your group is moving away', 'Most of the group has gone quiet. Catch up or send "Wait for me".', alarm: true);
   }
 
   Future<void> groupMessage(String from, String text, {bool alarm = false}) async {
-    await _buzz(strong: alarm);
+    if (quiet && !alarm) return;
+    unawaited(_buzz(strong: alarm));
     await _show(900 + from.hashCode % 100, from, text, alarm: alarm);
+  }
+
+  /// A *GPS-estimated* group spacing warning. Independent of BLE state, so a
+  /// healthy heartbeat never incorrectly cancels a distance warning.
+  /// It is intentionally NOT a missing-person SOS and must never be phrased as
+  /// a precise distance measurement; nearby phones may have poor GPS accuracy.
+  Future<void> distanceWarning(String memberId, String memberName,
+      {required double estimatedMetres, required bool urgent}) async {
+    if (quiet && !urgent) return;
+    final id = ('gps-spacing:$memberId').hashCode & 0x7fffffff;
+    final rounded = (estimatedMetres / 25).round() * 25;
+    unawaited(_buzz(strong: urgent));
+    await _show(id, urgent ? 'Group spacing is increasing' : 'Check your group spacing',
+      '$memberName is approximately ${rounded}m away by GPS. '
+      'Pause and visually check your group; the estimate may be inaccurate.',
+      alarm: urgent);
+  }
+
+  Future<void> distanceRestored(String memberId) async {
+    await _cancel(('gps-spacing:$memberId').hashCode & 0x7fffffff);
   }
 
   Future<void> clearAll() async {

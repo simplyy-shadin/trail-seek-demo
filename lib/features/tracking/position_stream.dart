@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as geo;
+
+import 'ref_counted_broadcast_stream.dart';
 
 /// The one GPS stream for the whole app. Solo tracking and the Digital Rope
 /// share it so two sessions never open two location streams.
@@ -11,7 +15,9 @@ final positionStreamProvider = Provider<Stream<geo.Position>>((ref) {
   final settings = switch (defaultTargetPlatform) {
     TargetPlatform.android => geo.AndroidSettings(
         accuracy: geo.LocationAccuracy.best,
-        distanceFilter: 3,
+        // Every 1 s fix reaches the recorder (as FitzTrack does); it decides
+        // what is movement, so small turns are not dropped by the OS.
+        distanceFilter: 0,
         intervalDuration: const Duration(seconds: 1),
         foregroundNotificationConfig: const geo.ForegroundNotificationConfig(
           notificationTitle: 'Trail Seek is recording',
@@ -32,7 +38,11 @@ final positionStreamProvider = Provider<Stream<geo.Position>>((ref) {
       ),
     _ => const geo.LocationSettings(accuracy: geo.LocationAccuracy.best, distanceFilter: 3),
   };
-  return geo.Geolocator.getPositionStream(locationSettings: settings).asBroadcastStream();
+  final shared = RefCountedBroadcastStream<geo.Position>(
+    () => geo.Geolocator.getPositionStream(locationSettings: settings),
+  );
+  ref.onDispose(() { unawaited(shared.dispose()); });
+  return shared;
 });
 
 /// Requests "while in use" location. Returns null when granted, else a

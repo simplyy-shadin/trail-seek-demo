@@ -136,3 +136,40 @@ Copy this section above the existing latest entry, and replace the placeholders 
 ```
 
 **Rule:** Do not merge or mark field reliability as proven solely because a Dart simulation passes. Preserve the relevant PR/commit links so line ranges remain verifiable as source files evolve.
+
+## 2026-11-10 — Smart gap warnings, priority BLE safety traffic, GPS shutdown
+
+**Source:** user-provided `trailseek-main (1).zip`; this change must be reviewed
+and tested on iOS/Android devices before anyone depends on it for safety.
+
+**Files added**
+- `lib/features/rope/engine/distance_safety_monitor.dart`: GPS-only spacing
+  advisory, 75m warning / 150m urgent default, conservative uncertainty,
+  fresh and independent sample confirmation, hysteresis.
+- `lib/features/tracking/ref_counted_broadcast_stream.dart`: restartable shared
+  native GPS stream cancelled when the final listener disconnects.
+- `test/distance_safety_monitor_test.dart`,
+  `test/ref_counted_broadcast_stream_test.dart`: event and resource lifecycle tests.
+
+**Files changed**
+- `lib/features/rope/engine/rope_config.dart`: opt-in `fieldTest` heartbeat
+  timing profile with 15s falling-behind, 35s separated and 90s additional
+  critical escalation; default profile left unchanged for legacy tests.
+- `lib/features/rope/rope_controller.dart`: use field-test profile for actual
+  groups; evaluate fresh GPS group spacing independently of heartbeat state;
+  never trigger an SOS solely from estimated distance.
+- `lib/features/rope/rope_alerts.dart`: show notifications without waiting
+  for the haptic loop; independent GPS-spacing notifications that do not
+  replace the BLE-link state.
+- `lib/features/rope/links/ble_peer_link.dart`: priority GATT resync for urgent
+  actions and warnings; preempt best-effort breadcrumb fetches after SOS;
+  avoid waiting for advertising completion before starting priority sync.
+- `lib/features/tracking/position_stream.dart`: replace bare
+  `asBroadcastStream()` with reference-counted native stream lifecycle.
+
+**Limitations:** BLE RSSI is NOT precise range. Remote GPS accuracy is not
+transported in the current roster, so gap warnings are estimates and never
+loss-of-person verdicts. iPhone silent-mode audio bypass requires an Apple
+Critical Alerts entitlement and consent; this change does not attempt a
+bypass. No Flutter SDK was available in the patching environment, so Dart
+analysis, Flutter tests and physical-device testing remain outstanding.

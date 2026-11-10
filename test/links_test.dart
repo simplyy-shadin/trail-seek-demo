@@ -9,7 +9,7 @@ void main() {
     expect(m, contains('trailseek://join/8UH2E4'));
     expect(m, contains(AppLinks.androidApk));
     expect(m, contains('Android'));
-    expect(AppLinks.androidApk, 'https://github.com/C00LPIXER/trailseek/releases/latest/download/trailseek.apk');
+    expect(AppLinks.androidApk, 'https://trailseek.vercel.app/trailseek.apk');
     expect(AppLinks.joinDeepLink('8UH2E4'), 'trailseek://join/8UH2E4');
   });
 }

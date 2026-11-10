@@ -10,9 +10,12 @@ import 'explorers.dart';
 /// Rank, level, archetype, skills, records, badges, achievements and history
 /// for one explorer. Used on every profile, including your own.
 class CharacterSheetView extends StatelessWidget {
-  const CharacterSheetView({super.key, required this.sheet, this.rank});
+  const CharacterSheetView({super.key, required this.sheet, this.rank, this.showLevel = true});
   final CharacterSheet sheet;
   final int? rank;
+
+  /// Off on your own profile, whose header already shows level and XP.
+  final bool showLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +41,17 @@ class CharacterSheetView extends StatelessWidget {
                       child: Text('#$rank', style: const TextStyle(fontWeight: FontWeight.w900, color: TsColors.onNeon)),
                     ),
                   if (rank != null) const SizedBox(width: 10),
-                  Expanded(child: Text('Level ${p.level} · ${p.title}', style: TsText.h3)),
+                  Expanded(child: Text(showLevel ? 'Level ${p.level} · ${p.title}' : 'Rank', style: TsText.h3)),
                   Text(NumberFormat.decimalPattern('en_IN').format(p.totalXp), style: TsText.h3.copyWith(color: TsColors.neon)),
                   const Text(' XP', style: TsText.caption),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(sheet.archetype, style: TsText.caption.copyWith(color: TsColors.amber, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              XpBar(level: p.level, xpInLevel: p.xpInLevel, xpForLevel: p.xpForLevel, height: 7),
+              Text('Style: ${sheet.archetype}', style: TsText.caption.copyWith(color: TsColors.amber, fontWeight: FontWeight.w800)),
+              if (showLevel) ...[
+                const SizedBox(height: 8),
+                XpBar(level: p.level, xpInLevel: p.xpInLevel, xpForLevel: p.xpForLevel, height: 7),
+              ],
             ],
           ),
         ),

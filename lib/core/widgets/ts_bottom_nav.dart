@@ -31,14 +31,14 @@ class TsBottomNav extends StatefulWidget {
 
   static const defaultItems = [
     TsNavItem(
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-      label: 'Home',
-    ),
-    TsNavItem(
       icon: Icons.explore_outlined,
       selectedIcon: Icons.explore,
       label: 'Explore',
+    ),
+    TsNavItem(
+      icon: Icons.forum_outlined,
+      selectedIcon: Icons.forum,
+      label: 'Community',
     ),
     TsNavItem(
       icon: Icons.map_outlined,

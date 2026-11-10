@@ -1,12 +1,14 @@
 /// Public links baked into share messages. Update when the repo or domain changes.
 abstract final class AppLinks {
-  static const repo = 'https://github.com/C00LPIXER/trailseek';
+  /// The brand website. The code repo is private, so everything public
+  /// (download, policies) is served from here.
+  static const site = 'https://trailseek.vercel.app';
 
-  /// Always points at the newest GitHub release's Android build.
-  static const androidApk = '$repo/releases/latest/download/trailseek.apk';
+  /// Always the newest Android build (copied in on every website deploy).
+  static const androidApk = '$site/trailseek.apk';
 
-  static const privacy = 'https://c00lpixer.github.io/trailseek/privacy.html';
-  static const terms = 'https://c00lpixer.github.io/trailseek/terms.html';
+  static const privacy = '$site/privacy.html';
+  static const terms = '$site/terms.html';
 
   static String joinDeepLink(String code, {String? securityKey}) {
     final uri = Uri(

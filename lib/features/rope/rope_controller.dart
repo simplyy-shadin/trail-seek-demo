@@ -10,6 +10,7 @@ import '../../data/models/adventure.dart';
 import '../../data/models/group_session.dart';
 import '../../data/models/session_summary.dart';
 import 'engine/geo.dart';
+import 'engine/distance_safety_monitor.dart';
 import 'engine/rope_config.dart';
 import 'engine/rope_engine.dart';
 import 'engine/rope_models.dart';
@@ -17,11 +18,15 @@ import 'links/ble_peer_link.dart';
 import 'links/peer_link.dart';
 import 'links/rope_safety_relay.dart';
 import 'links/simulated_peer_link.dart';
+import 'group_trails.dart';
+import '../trails/trail_learner.dart';
+import '../trails/trail_store.dart';
 import 'rope_alerts.dart';
 import 'rope_log.dart';
 import '../activity/track_store.dart';
 import '../tracking/position_stream.dart';
 import '../tracking/track_recorder.dart';
+import '../settings/settings_controller.dart';
 
 @immutable
 class RopeSessionState {
@@ -159,10 +164,13 @@ class RopeController extends Notifier<RopeSessionState?> {
   Timer? _ticker;
   final List<StreamSubscription> _subs = [];
   TrackRecorder _ownTrack = TrackRecorder();
+  DistanceSafetyMonitor _spacing = DistanceSafetyMonitor();
+  double _selfAccuracyM = double.infinity;
 
   @override
   RopeSessionState? build() {
     ref.onDispose(_teardown);
+    ref.listen(settingsProvider, (_, next) => RopeAlerts.instance.quiet = !next.notifyGroupAlerts);
     return null;
   }
 
@@ -174,7 +182,7 @@ class RopeController extends Notifier<RopeSessionState?> {
     await _teardown();
     final self = session.self;
     if (self == null) throw StateError('Session has no self member');
-    final cfg = config ?? (session.simulated ? RopeConfig.demo : const RopeConfig());
+    final cfg = config ?? (session.simulated ? RopeConfig.demo : RopeConfig.fieldTest);
     final now = DateTime.now();
     final route = Route.synthetic(GeoPoint(adventure.lat, adventure.lng), lengthKm: adventure.distanceKm.clamp(1.5, 6.0));
 
@@ -191,11 +199,27 @@ class RopeController extends Notifier<RopeSessionState?> {
             onPosition: (memberId, fix) {
               final s = state;
               if (s == null) return;
-              final p = GeoPoint(fix.lat, fix.lng);
+              final known = s.positionTimes[memberId];
+              if (known != null && !fix.at.isAfter(known)) return;
               state = s.copyWith(
-                positions: {...s.positions, memberId: p},
+                positions: {...s.positions, memberId: GeoPoint(fix.lat, fix.lng)},
                 positionTimes: {...s.positionTimes, memberId: fix.at},
-                trails: s.trailWith(memberId, p),
+              );
+            },
+            // Their whole walked path, breadcrumb by breadcrumb (relayed hop by
+            // hop), so the line has no gaps and the pin sits on the newest point.
+            onTrail: (memberIndex, path) {
+              final s = state;
+              if (s == null || path.isEmpty) return;
+              final m = s.session.members.where((m) => m.memberIndex == memberIndex).firstOrNull;
+              if (m == null || m.isSelf) return;
+              final last = path.last;
+              final known = s.positionTimes[m.id];
+              final newer = known == null || last.at.isAfter(known);
+              state = s.copyWith(
+                trails: {...s.trails, m.id: [for (final p in path) p.geo]},
+                positions: newer ? {...s.positions, m.id: last.geo} : null,
+                positionTimes: newer ? {...s.positionTimes, m.id: last.at} : null,
               );
             },
             onSessionInfo: (info) async {
@@ -238,6 +262,7 @@ class RopeController extends Notifier<RopeSessionState?> {
           state = s.copyWith(
             positions: {...s.positions, o.memberId: o.position!},
             positionTimes: {...s.positionTimes, o.memberId: o.at},
+            trails: s.trailWith(o.memberId, o.position!),
           );
         }
       }
@@ -289,6 +314,8 @@ class RopeController extends Notifier<RopeSessionState?> {
     }
 
     if (!session.simulated) {
+      // Pull the trail other groups have walked here (cloud builds only).
+      unawaited(ref.read(trailStoreProvider.notifier).sync(adventure.id));
       // Start together skips the checklist, so ask for alarm notifications here.
       await RopeAlerts.instance.requestPermission();
       final problem = await ensureLocationPermission();
@@ -296,6 +323,8 @@ class RopeController extends Notifier<RopeSessionState?> {
       _startGps();
     }
 
+    // Settings → Group alerts (safety alarms are never silenced).
+    RopeAlerts.instance.quiet = !ref.read(settingsProvider).notifyGroupAlerts;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
     _tick();
   }
@@ -357,6 +386,7 @@ class RopeController extends Notifier<RopeSessionState?> {
       return;
     }
 
+    _selfAccuracyM = p.accuracy;
     final fix = TrackPoint(
       lat: p.latitude,
       lng: p.longitude,
@@ -369,7 +399,7 @@ class RopeController extends Notifier<RopeSessionState?> {
     final anchor = countDistance ? _ownTrack.last : fix;
     if (anchor == null) return;
     final here = anchor.geo;
-    if (_link case final BlePeerLink l) {
+    if (_link case final BlePeerLink l when ref.read(settingsProvider).shareLocationInGroups) {
       // Relay a stable position rather than a rejected GPS jump.
       l.updateSelfPosition(here.lat, here.lng, p.timestamp);
     }
@@ -392,6 +422,7 @@ class RopeController extends Notifier<RopeSessionState?> {
     final now = DateTime.now();
     final snap = engine.tick(now);
     _raiseAlerts(engine, snap, s);
+    if (!s.simulated) _checkSpacing(s, now);
     final sim = simulator;
     state = s.copyWith(
       snapshot: snap,
@@ -400,6 +431,32 @@ class RopeController extends Notifier<RopeSessionState?> {
       selfPositionAt: sim == null ? null : now,
       distanceKm: sim == null ? null : sim.selfProgress * s.route.lengthMetres / 1000,
     );
+  }
+
+  void _checkSpacing(RopeSessionState s, DateTime now) {
+    // GPS reports are independent of BLE heartbeat health. This is an
+    // advisory *spacing* warning, never a direct SOS or lost-person verdict.
+    for (final member in s.others) {
+      final change = _spacing.observe(
+        memberId: member.id,
+        self: s.selfPosition,
+        selfAt: s.selfPositionAt,
+        peer: s.positions[member.id],
+        peerAt: s.positionTimes[member.id],
+        now: now,
+        selfAccuracyMetres: _selfAccuracyM,
+      );
+      if (change == null) continue;
+      if (change.level == SpacingLevel.normal) {
+        unawaited(RopeAlerts.instance.distanceRestored(member.id));
+      } else {
+        unawaited(RopeAlerts.instance.distanceWarning(
+          member.id, member.displayName,
+          estimatedMetres: change.metres,
+          urgent: change.level == SpacingLevel.urgent,
+        ));
+      }
+    }
   }
 
   int _alertedEvents = 0;
@@ -516,6 +573,29 @@ class RopeController extends Notifier<RopeSessionState?> {
       'session-${s.session.id}',
       TrackData(points: points, movingTime: sim != null ? s.elapsed : _ownTrack.movingTime, accuracyRatio: sim != null ? 0 : _ownTrack.accuracyRatio),
     );
+    // Everyone's walked path, so the trek can be looked back on as a group.
+    final selfId = s.self?.id;
+    await ref.read(groupTrailStoreProvider).save('session-${s.session.id}', [
+      for (final m in s.session.members)
+        if ((s.trails[m.id]?.length ?? 0) >= 2 || (m.id == selfId && points.length >= 2))
+          MemberPath(
+            memberId: m.id,
+            name: m.displayName,
+            memberIndex: m.memberIndex,
+            isSelf: m.id == selfId,
+            points: m.id == selfId ? [for (final p in points) p.geo] : s.trails[m.id]!,
+          ),
+    ]);
+    // Every real walker's path teaches the adventure's trail (3+ people → a trail).
+    if (!s.simulated) {
+      final walks = [
+        for (final m in s.session.members)
+          if (m.id == selfId ? points.length >= 2 : (s.trails[m.id]?.length ?? 0) >= 2)
+            Walk(walkerId: m.id, at: s.startedAt, points: m.id == selfId ? [for (final p in points) p.geo] : s.trails[m.id]!),
+      ];
+      final own = walks.where((w) => w.walkerId == selfId).firstOrNull;
+      await ref.read(trailStoreProvider.notifier).addWalks(s.adventure.id, walks, own: own);
+    }
     await ref.read(activitiesProvider.notifier).add(ActivityRecord.fromSessionSummary(
       summary,
       type: ActivityType.values.firstWhere((t) => t.name == s.adventure.primaryCategory.name, orElse: () => ActivityType.trekking),
@@ -552,6 +632,8 @@ class RopeController extends Notifier<RopeSessionState?> {
     _engine?.dispose();
     _engine = null;
     _ownTrack = TrackRecorder();
+    _spacing.clear();
+    _selfAccuracyM = double.infinity;
     _alertedEvents = 0;
     _wasIsolated = false;
   }

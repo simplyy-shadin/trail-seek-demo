@@ -18,3 +18,17 @@ if (fs.existsSync(src)) {
 } else {
   console.log('no ../assets (deploying from web/ alone): using committed data');
 }
+
+// Privacy policy and terms are served by the website (the code repo is private).
+for (const f of ['privacy.html', 'terms.html']) {
+  const from = path.join(root, 'docs', f);
+  if (fs.existsSync(from)) fs.copyFileSync(from, path.join(web, 'public', f));
+}
+
+// The Android app: the newest local release build becomes /trailseek.apk
+// (git-ignored; uploaded with the deploy). Group invites link here.
+const apk = path.join(root, 'build', 'app', 'outputs', 'flutter-apk', 'app-release.apk');
+if (fs.existsSync(apk)) {
+  fs.copyFileSync(apk, path.join(web, 'public', 'trailseek.apk'));
+  console.log('copied Android build to public/trailseek.apk');
+}
