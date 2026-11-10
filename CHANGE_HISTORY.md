@@ -6,6 +6,15 @@
 >
 > **Updating policy:** On each **future push I make** to Trailseek, update this history alongside the code, including new/modified file names, changed lines, summary, test status and commit/PR references. Pushes made by other people are not captured automatically. Do not record untested code as field-tested.
 
+## 2026-11-10 — PR #5: Latest ZIP + SmartTrace / Digital Rope updates (merged)
+
+- **Status:** **Merged into `main` on 2026-11-10.** [PR #5](https://github.com/simplyy-shadin/trail-seek-demo/pull/5) · [Squash merge `91c9b20c`](https://github.com/simplyy-shadin/trail-seek-demo/commit/91c9b20cdae195983324d37fad2fdbdfb87b06a2).
+- **Scope:** 52 files updated in the merged PR (15 new, 37 modified): encrypted per-member BLE breadcrumb exchange, group route map, community trail learning, GPS filtering/stream lifecycle, BLE priority safety relays, approximate GPS spacing advisories, community/discovery UI, web updates and related tests.
+- **Two source commits:** [ZIP import `1848ab8`](https://github.com/simplyy-shadin/trail-seek-demo/commit/1848ab8beba36bd04a0d68bc97d7ebf08ba97e9f) and [battery-balanced SmartTrace `d6e26f6`](https://github.com/simplyy-shadin/trail-seek-demo/commit/d6e26f60e8f8b2ba453e9d5941c423b136126689).
+- **CI at PR head `d6e26f6`:** [Flutter analysis and tests passed](https://github.com/simplyy-shadin/trail-seek-demo/actions/runs/42795276685); [Android debug APK and unsigned iOS compilation passed](https://github.com/simplyy-shadin/trail-seek-demo/actions/runs/42795276526). This is automated testing, **not** an iOS/Android real-device field reliability or battery claim.
+- **Changed files and PR new-side line ranges:** [`changes.md`](changes.md) documents every changed file, PR diff hunk ranges, user-visible changes, test evidence and known limits. [PR #5 Files changed](https://github.com/simplyy-shadin/trail-seek-demo/pull/5/files) provides the exact patch.
+- **Pending:** Measure 1-hour iPhone battery impact, GPS route accuracy on C/S-shaped forest paths, mixed-device Bluetooth latency, direct/multi-hop SOS delivery with screens locked, sound restrictions and false alerts. Remote GPS spacing is approximate, not a precise radio-distance sensor; iPhone silent-mode bypass is not provided.
+
 ## 2026-11-10 — SmartTrace battery-balanced GPS improvement (PR #5 follow-up)
 
 - **Goal:** Improve small outdoor-turn sampling and stationary-marker stability while reducing needless GPS and Bluetooth work. This does *not* turn GPS into a metre-accurate indoor locator.
@@ -14,7 +23,7 @@
 - **`lib/features/tracking/tracking_controller.dart`:** Reject >30s stale position timestamps and keep the live marker at the last accepted route position rather than showing rejected GPS jitter.
 - **`lib/features/rope/rope_controller.dart`:** Share and timestamp only accepted GPS anchors instead of falsely refreshing a rejected coordinate; helps avoid stale BLE spacing warnings and reduces unnecessary position processing.
 - **`test/track_recorder_test.dart`:** Regression cases for tight good-GNSS turns versus poor-GNSS tiny movement.
-- **Verification:** Static code review performed; Flutter SDK not present in this environment, so Flutter tests/builds and battery profiling **not run locally**. Await CI and real iPhone/Android locked-screen trials. Do not claim measurable battery-life improvement yet.
+- **Verification:** Flutter SDK unavailable for local execution. At final PR head `d6e26f6`, GitHub Actions [Flutter analysis/tests passed](https://github.com/simplyy-shadin/trail-seek-demo/actions/runs/42795276685) and [Android debug APK plus unsigned iOS compilation passed](https://github.com/simplyy-shadin/trail-seek-demo/actions/runs/42795276526). Real-device battery profiling and locked-screen accuracy tests remain pending; no measured battery-life improvement is claimed.
 
 ## Latest status
 
@@ -26,6 +35,7 @@
 | Adaptive GPS threshold experiment | **Obsolete — safe to delete; NOT merged** | [Archived code commit](https://github.com/simplyy-shadin/trail-seek-demo/commit/2795ec7ee106196e53a0b0b8d49cabbe9cd8bc63) · [Branch (until deleted)](https://github.com/simplyy-shadin/trail-seek-demo/tree/fix/adaptive-gps-noise-thresholds) |
 | Manual SOS/STOP/WAIT multi-hop fix | **Merged into `main`; automated checks passed** | [PR #3](https://github.com/simplyy-shadin/trail-seek-demo/pull/3) |
 | BLE group authentication & privacy | **Merged into `main`; Android & iOS compile checks passed** | [PR #4](https://github.com/simplyy-shadin/trail-seek-demo/pull/4) |
+| PR #5 — Latest ZIP + SmartTrace battery-balanced GPS | **Merged into `main`; latest CI passed** | [PR #5](https://github.com/simplyy-shadin/trail-seek-demo/pull/5) · [Changes](changes.md) |
 | Physical BLE / iOS lock-screen field tests | Pending | Automated unit tests are not hardware validation |
 
 ## 2026-11-04 — PR #4: BLE group authentication & encrypted GPS roster (merged)
