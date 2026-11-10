@@ -10,9 +10,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/avatar.dart';
-import '../booking/booking_controller.dart';
 import '../progress/level_table.dart';
-import 'package:intl/intl.dart';
 import 'community_controller.dart';
 import 'community_models.dart';
 
@@ -60,10 +58,14 @@ class _CommunityTabState extends ConsumerState<CommunityTab> {
         actions: [
           if (state.tag != null)
             TextButton.icon(onPressed: () => ctrl.setTag(null), icon: const Icon(Icons.close, size: 16), label: Text('#${state.tag}')),
-          IconButton(tooltip: 'Groups & invites', onPressed: () => context.push('/groups'), icon: const Icon(Icons.mail_outline)),
+          // Trek groups (create, join by QR, Digital Rope), not messages.
+          IconButton(tooltip: 'My groups', onPressed: () => context.push('/groups'), icon: const Icon(Icons.groups_outlined)),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      // Lifted above the floating bottom bar, which the feed scrolls under.
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 64),
+        child: FloatingActionButton.extended(
         heroTag: 'post',
         onPressed: () => context.push(user == null ? '/auth?redirect=/community/compose' : '/community/compose'),
         backgroundColor: TsColors.bg,
@@ -73,10 +75,10 @@ class _CommunityTabState extends ConsumerState<CommunityTab> {
         shape: const StadiumBorder(side: BorderSide(color: Colors.white, width: 1.4)),
         icon: const Icon(Icons.add_circle_outline),
         label: const Text('Post', style: TextStyle(fontWeight: FontWeight.w800)),
+        ),
       ),
       body: Column(
         children: [
-          const _HomeBanners(),
           const _TopExplorers(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
@@ -121,7 +123,7 @@ class _CommunityTabState extends ConsumerState<CommunityTab> {
                         onRefresh: ctrl.refresh,
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 90),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 150), // clear of the bar and the Post button
                           itemCount: posts.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (_, i) => PostCard(post: posts[i]),
@@ -200,36 +202,6 @@ class _TopExplorersState extends ConsumerState<_TopExplorers> {
         );
       },
     );
-  }
-}
-
-/// Next trip and live Digital Rope shortcuts on Home.
-class _HomeBanners extends ConsumerWidget {
-  const _HomeBanners();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(bookingProvider);
-    final next = ref.read(bookingProvider.notifier).upcoming.firstOrNull;
-    final active = ref.watch(activeSessionProvider);
-    Widget banner(IconData icon, String text, VoidCallback onTap, {bool neon = false}) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-          child: TsCard(
-            color: neon ? TsColors.neon : null,
-            highlighted: !neon,
-            onTap: onTap,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            child: Row(children: [
-              Icon(icon, size: 18, color: neon ? TsColors.onNeon : TsColors.neon),
-              const SizedBox(width: 10),
-              Expanded(child: Text(text, style: TsText.bodyStrong.copyWith(color: neon ? TsColors.onNeon : null), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Icon(Icons.chevron_right, color: neon ? TsColors.onNeon : TsColors.textMuted),
-            ]),
-          ),
-        );
-    return Column(children: [
-      if (active != null) banner(Icons.sensors, 'Digital Rope active · ${active.name}', () => context.push('/group/${active.id}/live'), neon: true),
-      if (next != null) banner(Icons.confirmation_number_outlined, 'Next trip: ${next.programName} · ${DateFormat('d MMM').format(next.date)}', () => context.push('/booking/${next.id}')),
-    ]);
   }
 }
 

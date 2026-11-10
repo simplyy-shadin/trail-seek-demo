@@ -11,6 +11,8 @@ import '../../core/widgets/widgets.dart';
 import '../../data/models/group_session.dart';
 import 'engine/geo.dart';
 import 'engine/rope_models.dart';
+import 'group_trails.dart';
+import '../trails/trail_layer.dart';
 import '../../data/models/avatar.dart';
 import 'links/simulated_peer_link.dart';
 import 'participants_sheet.dart';
@@ -31,6 +33,21 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   final _map = MapController();
   bool _follow = true;
   bool _mapReady = false;
+
+  /// What the camera last framed. Re-framing on every rebuild (each second)
+  /// kept cancelling tile loads, so the map stayed black while following.
+  List<GeoPoint>? _framed;
+  DateTime? _framedAt;
+
+  bool _needsReframe(List<GeoPoint> group) {
+    final last = _framed;
+    if (last == null || last.length != group.length) return true;
+    if (_framedAt != null && DateTime.now().difference(_framedAt!) < const Duration(seconds: 3)) return false;
+    for (var i = 0; i < group.length; i++) {
+      if (haversineMetres(last[i], group[i]) > 8) return true;
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -74,14 +91,18 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
         for (final m in rope.others)
           if (_fresh(rope, m.id)) rope.positions[m.id]!,
       ];
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_follow) return;
-        if (group.length < 2) {
-          _map.move(_ll(self), _map.camera.zoom);
-        } else {
-          _map.fitCamera(CameraFit.coordinates(coordinates: group.map(_ll).toList(), padding: const EdgeInsets.fromLTRB(60, 170, 60, 380), maxZoom: 18));
-        }
-      });
+      if (_needsReframe(group)) {
+        _framed = group;
+        _framedAt = DateTime.now();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !_follow) return;
+          if (group.length < 2) {
+            _map.move(_ll(self), _map.camera.zoom);
+          } else {
+            _map.fitCamera(CameraFit.coordinates(coordinates: group.map(_ll).toList(), padding: const EdgeInsets.fromLTRB(60, 170, 60, 380), maxZoom: 18));
+          }
+        });
+      }
     }
 
     return Scaffold(
@@ -100,11 +121,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
             ),
             children: [
               const TsTileLayer(),
+              // The trail other walkers made (nothing until 3+ people walked it).
+              if (!rope.simulated) LearnedTrailLayer(adventureId: rope.adventure.id),
               if (rope.simulated)
                 PolylineLayer(
                   polylines: [Polyline(points: rope.route.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.green.withValues(alpha: 0.85))],
                 ),
-              // Where everyone has walked: my path in neon, members in their state colour.
+              // Where everyone has walked: my path in neon, each member in their own colour.
               PolylineLayer(
                 polylines: [
                   for (final m in rope.session.members)
@@ -112,10 +135,10 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                       Polyline(
                         points: rope.trails[m.id]!.map(_ll).toList(),
                         strokeWidth: m.isSelf ? 6 : 4.5,
-                        color: m.isSelf ? TsColors.neon : stateColor(rope.stateOf(m.id)),
+                        color: m.isSelf ? TsColors.neon : memberPathColor(m.memberIndex),
                         // Soft glow around the line, like a lit trail.
                         borderStrokeWidth: 7,
-                        borderColor: (m.isSelf ? TsColors.neon : stateColor(rope.stateOf(m.id))).withValues(alpha: 0.28),
+                        borderColor: (m.isSelf ? TsColors.neon : memberPathColor(m.memberIndex)).withValues(alpha: 0.28),
                         strokeCap: StrokeCap.round,
                         strokeJoin: StrokeJoin.round,
                       ),
@@ -131,6 +154,22 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 ),
               MarkerLayer(
                 markers: [
+                  // The exact fix: a dot in the member's path colour, the pin points at it.
+                  for (final m in rope.others)
+                    if (rope.positions[m.id] != null)
+                      Marker(
+                        point: _ll(rope.positions[m.id]!),
+                        width: 14,
+                        height: 14,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: memberPathColor(m.memberIndex),
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black54)],
+                          ),
+                        ),
+                      ),
                   for (final m in rope.others)
                     if (rope.positions[m.id] != null)
                       Marker(
@@ -138,7 +177,10 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                         width: 54,
                         height: 66,
                         alignment: Alignment.topCenter,
-                        child: GestureDetector(onTap: () => _memberSheet(context, rope, m), child: _Pin(member: m, color: stateColor(rope.stateOf(m.id)))),
+                        child: GestureDetector(
+                          onTap: () => _memberSheet(context, rope, m),
+                          child: _Pin(member: m, color: stateColor(rope.stateOf(m.id))),
+                        ),
                       ),
                   // Me: blue dot with a halo.
                   if (self != null)
@@ -244,10 +286,17 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
           // Right-side map controls
           Positioned(
             right: 12,
-            bottom: 232,
+            bottom: 316,
             child: Column(
               children: [
-                _RoundButton(icon: _follow ? Icons.my_location : Icons.location_searching, tooltip: 'Follow me', onTap: () => setState(() => _follow = true)),
+                _RoundButton(
+                  icon: _follow ? Icons.my_location : Icons.location_searching,
+                  tooltip: 'Follow me',
+                  onTap: () => setState(() {
+                    _follow = true;
+                    _framed = null; // frame the group again right away
+                  }),
+                ),
                 const SizedBox(height: 8),
                 _RoundButton(icon: Icons.people_outline, tooltip: 'Participants', onTap: () => _membersSheet(context, rope)),
                 if (rope.simulated) ...[const SizedBox(height: 8), _RoundButton(icon: Icons.science_outlined, tooltip: 'Demo scenarios', onTap: () => _scenarioSheet(context, rope))],
@@ -743,6 +792,8 @@ class _Quick extends StatelessWidget {
 
 /// Short, readable text for a Bluetooth failure instead of a platform stack trace.
 String radioErrorText(String raw) {
+  raw = raw.replaceFirst(RegExp(r'^(Bad state|Exception|StateError): '), '');
+  if (raw.contains('no Bluetooth Low Energy') || raw.contains('Allow Nearby devices')) return raw;
   if (raw.contains('error code: 1')) return 'Bluetooth was busy with another scan. End the session and start it again.';
   if (raw.toLowerCase().contains('permission')) return 'Trail Seek needs Bluetooth and Nearby devices permission. Allow it in Settings.';
   if (raw.toLowerCase().contains('powered') || raw.toLowerCase().contains('turned off')) return 'Turn on Bluetooth to stay linked with your group.';
@@ -764,7 +815,7 @@ class _MemberStrip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SizedBox(
-        height: 64,
+        height: 76,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: others.length,
@@ -802,7 +853,19 @@ class _MemberStrip extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Same colour as their path on the map.
+                            Container(
+                              width: 12,
+                              height: 4,
+                              decoration: BoxDecoration(color: memberPathColor(m.memberIndex), borderRadius: BorderRadius.circular(2)),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                          ],
+                        ),
                         Text(
                           dist,
                           style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 13),
@@ -835,10 +898,22 @@ class _Pin extends StatelessWidget {
     return Stack(
       alignment: Alignment.topCenter,
       children: [
-        Icon(Icons.location_on, size: 66, color: color, shadows: const [Shadow(blurRadius: 8, color: Colors.black54)]),
+        Icon(
+          Icons.location_on,
+          size: 66,
+          color: color,
+          shadows: const [Shadow(blurRadius: 8, color: Colors.black54)],
+        ),
         Padding(
           padding: const EdgeInsets.only(top: 9),
-          child: MemberAvatar(initials: member.initials, avatar: member.avatarId == null ? null : Avatar.decode(member.avatarId), avatarId: member.avatarId, size: 30, color: color, ring: Colors.white),
+          child: MemberAvatar(
+            initials: member.initials,
+            avatar: member.avatarId == null ? null : Avatar.decode(member.avatarId),
+            avatarId: member.avatarId,
+            size: 30,
+            color: color,
+            ring: Colors.white,
+          ),
         ),
       ],
     );

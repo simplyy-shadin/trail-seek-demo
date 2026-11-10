@@ -14,6 +14,7 @@ import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/avatar.dart';
 import '../../data/models/group_session.dart';
+import '../rope/live_tracking_screen.dart' show radioErrorText;
 import '../rope/rope_controller.dart';
 import 'lobby_sync.dart';
 
@@ -185,7 +186,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(sync.error ?? (sync.status.isEmpty ? 'Bluetooth sync' : sync.status), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                          Text(sync.error != null ? radioErrorText(sync.error!) : (sync.status.isEmpty ? 'Bluetooth sync' : sync.status), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                           Text(
                             pendingOrganizer
                                 ? 'Stand within a few metres of the organizer\'s phone. Keep this screen open.'
@@ -195,6 +196,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                         ],
                       ),
                     ),
+                    if (sync.error != null) TextButton(onPressed: () => _sync.start(s), child: const Text('Try again')),
                   ],
                 ),
               ),

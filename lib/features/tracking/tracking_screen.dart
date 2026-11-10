@@ -10,6 +10,7 @@ import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
 import '../rope/engine/geo.dart';
 import '../settings/settings_controller.dart';
+import '../trails/trail_layer.dart';
 import 'tracking_controller.dart';
 
 LatLng _ll(GeoPoint p) => LatLng(p.lat, p.lng);
@@ -64,6 +65,7 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
             ),
             children: [
               const TsTileLayer(),
+              if (t.adventureId != null) LearnedTrailLayer(adventureId: t.adventureId!),
               if (t.points.length > 1)
                 PolylineLayer(polylines: [Polyline(points: t.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.neon)]),
               if (pos != null)

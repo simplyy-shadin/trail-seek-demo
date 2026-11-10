@@ -46,20 +46,20 @@ void main() {
     expect(find.text('Get Started'), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
 
-    // Browse-first: Get Started lands on Home (the feed), no sign-up.
+    // Browse-first: Get Started lands on Explore (programmes), no sign-up.
     await tester.tap(find.text('Get Started'));
-    await settle(tester);
-
-    expect(find.text('Post'), findsOneWidget);
-    expect(find.text('Top Explorers'), findsOneWidget);
-    expect(find.text('Create Account'), findsNothing);
-
-    // Icons-only navigation: tap Explore using its icon.
-    await tester.tap(find.byIcon(Icons.explore_outlined));
     await settle(tester);
 
     expect(find.text('Thrissur'), findsOneWidget);
     expect(find.text('Athirappilly'), findsWidgets);
+    expect(find.text('Create Account'), findsNothing);
+
+    // Icons-only navigation: the social feed is the second tab.
+    await tester.tap(find.byIcon(Icons.forum_outlined));
+    await settle(tester);
+
+    expect(find.text('Post'), findsOneWidget);
+    expect(find.text('Top Explorers'), findsOneWidget);
   });
 
   testWidgets(
@@ -83,11 +83,11 @@ void main() {
 
     await settle(tester);
 
-    expect(find.text('Post'), findsOneWidget);
+    expect(find.text('Thrissur'), findsOneWidget);
     expect(find.text('Create Account'), findsNothing);
 
     // Navigate to a gated route exactly as a tap on "Create Group" would.
-    GoRouter.of(tester.element(find.text('Post'))).push('/group/create');
+    GoRouter.of(tester.element(find.text('Thrissur'))).push('/group/create');
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
@@ -117,12 +117,12 @@ void main() {
 
     await settle(tester);
 
-    expect(find.text('Post'), findsOneWidget);
+    expect(find.text('Thrissur'), findsOneWidget);
     expect(find.byType(TsBottomNav), findsOneWidget);
 
-    // Verify the four icons instead of the removed text labels.
-    expect(find.byIcon(Icons.home), findsOneWidget);
-    expect(find.byIcon(Icons.explore_outlined), findsOneWidget);
+    // Verify the four icons instead of the removed text labels: Explore first (selected).
+    expect(find.byIcon(Icons.explore), findsOneWidget);
+    expect(find.byIcon(Icons.forum_outlined), findsOneWidget);
     expect(find.byIcon(Icons.map_outlined), findsOneWidget);
     expect(find.byIcon(Icons.account_circle_outlined), findsOneWidget);
 

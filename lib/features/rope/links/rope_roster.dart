@@ -137,8 +137,13 @@ class RosterSnapshot {
   RosterEntry? get organizer => entries.where((e) => e.isOrganizer).firstOrNull;
 
   Uint8List toBytes() {
-    // Try rich → compact until it fits the attribute limit.
-    for (final (nameLen, withAvatar, withInfo, withPos) in [(16, true, true, true), (12, false, true, true), (6, false, true, true), (4, false, true, false), (4, false, false, false)]) {
+    // Try rich → compact until it fits the attribute limit. Positions are
+    // dropped last: on a trek every member's name is already known, so names
+    // shrink first (a 10-person group used to lose everyone's pin here).
+    for (final (nameLen, withAvatar, withInfo, withPos) in [
+      (16, true, true, true), (12, false, true, true), (6, false, true, true), (2, false, true, true), (0, false, true, true),
+      (4, false, true, false), (4, false, false, false),
+    ]) {
       final b = StringBuffer('1|$sessionHash|$code');
       if (withInfo && info != null) b.write('|${info!.encode()}');
       for (final e in entries) {

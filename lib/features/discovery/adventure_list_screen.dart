@@ -136,12 +136,7 @@ class _AdventureListScreenState extends ConsumerState<AdventureListScreen> {
                 );
               }),
             )
-          else
-            IconButton(
-              tooltip: 'Saved',
-              onPressed: () => context.push('/saved'),
-              icon: Icon(filter.savedOnly ? Icons.favorite : Icons.favorite_border, color: filter.savedOnly ? TsColors.danger : null),
-            ),
+          // No separate Saved button here: the "Saved" filter chip below does it.
         ],
       ),
       body: Column(

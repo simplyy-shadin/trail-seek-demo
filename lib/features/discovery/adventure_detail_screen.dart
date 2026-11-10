@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../trails/trail_layer.dart';
+import '../trails/trail_store.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
@@ -28,6 +30,13 @@ class AdventureDetailScreen extends ConsumerStatefulWidget {
 
 class _AdventureDetailScreenState extends ConsumerState<AdventureDetailScreen> {
   _Section _section = _Section.overview;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch walks other people uploaded for this adventure (cloud builds).
+    WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(trailStoreProvider.notifier).sync(widget.id));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -386,12 +395,14 @@ class _TimingCard extends StatelessWidget {
   );
 }
 
-class _TrailheadMap extends StatelessWidget {
+class _TrailheadMap extends ConsumerWidget {
   const _TrailheadMap(this.a);
   final Adventure a;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = LatLng(a.lat, a.lng);
+    final trail = ref.watch(learnedTrailProvider(a.id));
+    final trailPts = [for (final s in trail.segments) for (final q in s) LatLng(q.lat, q.lng)];
     return TsCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -405,11 +416,13 @@ class _TrailheadMap extends StatelessWidget {
                   options: MapOptions(
                     initialCenter: p,
                     initialZoom: 12,
+                    initialCameraFit: trailPts.length < 2 ? null : CameraFit.coordinates(coordinates: [p, ...trailPts], padding: const EdgeInsets.all(24), maxZoom: 16),
                     interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
                     backgroundColor: TsColors.surface,
                   ),
                   children: [
                     const TsTileLayer(),
+                    LearnedTrailLayer(adventureId: a.id),
                     MarkerLayer(
                       markers: [
                         Marker(
@@ -424,6 +437,23 @@ class _TrailheadMap extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: Row(
+              children: [
+                Icon(trail.isEmpty ? Icons.route_outlined : Icons.route, size: 18, color: trail.isEmpty ? TsColors.textMuted : TsColors.neon),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    trail.isEmpty
+                        ? 'No trail line yet. It is drawn once 3 trekkers have walked it.'
+                        : 'Trail walked by ${trail.walkers} trekkers · ${(trail.lengthM / 1000).toStringAsFixed(1)} km',
+                    style: TsText.caption,
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(

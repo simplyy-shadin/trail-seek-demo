@@ -72,7 +72,11 @@ class Skill {
 /// Everything the explorer profile shows, derived from the activity history
 /// with the same engine that scores the signed-in user.
 class CharacterSheet {
-  CharacterSheet(this.records) : state = const ProgressEngine().rebuild(records);
+  /// Only outings that count (the engine's rule): a demo or a 2-minute
+  /// stroll must not set the "Highest" or "Longest" record.
+  CharacterSheet(List<ActivityRecord> all)
+      : records = [for (final r in all) if (!r.isTrivial && !r.simulated) r],
+        state = const ProgressEngine().rebuild(all);
   final List<ActivityRecord> records;
   final ProgressState state;
 

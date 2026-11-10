@@ -277,3 +277,30 @@ select pr.id, pr.display_name, pr.username, pr.avatar_id, pr.bio, pr.home_town, 
        (select count(*) + 1 from public.profiles o where o.xp > pr.xp)::int as rank
 from public.profiles pr;
 grant select on public.profile_cards to authenticated;
+
+-- ------------------------------------------------------------ trail walks
+-- Every finished trek uploads the walker's own path for that adventure.
+-- Trails are learned on the phone from many walks (3+ different people on
+-- the same line), so no map data is needed. walker_key is a one-way hash,
+-- never the account id; the first and last 50 m are trimmed before upload.
+create table if not exists public.trail_walks (
+  id uuid primary key default gen_random_uuid(),
+  adventure_id text not null,
+  walker_key text not null,
+  walked_at timestamptz not null default now(),
+  points jsonb not null,
+  owner_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index if not exists trail_walks_adventure on public.trail_walks (adventure_id, walked_at desc);
+alter table public.trail_walks enable row level security;
+do $$ begin
+  drop policy if exists trail_walks_read on public.trail_walks;
+  create policy trail_walks_read on public.trail_walks for select to authenticated using (true);
+  drop policy if exists trail_walks_insert_own on public.trail_walks;
+  create policy trail_walks_insert_own on public.trail_walks for insert to authenticated with check (owner_id = auth.uid());
+end $$;
+-- Readers see walks, not who walked them.
+revoke select on public.trail_walks from authenticated;
+grant select (id, adventure_id, walker_key, walked_at, points) on public.trail_walks to authenticated;
+grant insert on public.trail_walks to authenticated;

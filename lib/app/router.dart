@@ -107,14 +107,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const CommunityTab())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreTab())]),
+          // Explore first: the app opens on programmes; the social feed is second.
+          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const ExploreTab())]),
+          StatefulShellBranch(routes: [GoRoute(path: '/feed', builder: (_, _) => const CommunityTab())]),
           StatefulShellBranch(routes: [GoRoute(path: '/map', builder: (_, _) => const MapTab())]),
           StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, _) => const ProfileTab())]),
         ],
       ),
       GoRoute(path: '/groups', builder: (_, _) => const GroupsTab()),
-      GoRoute(path: '/community', redirect: (_, _) => '/home'),
+      GoRoute(path: '/community', redirect: (_, _) => '/feed'),
+      GoRoute(path: '/explore', redirect: (_, _) => '/home'),
       GoRoute(path: '/saved', builder: (_, _) => const SavedTab()),
       GoRoute(path: '/community/compose', builder: (_, _) => const ComposePostScreen()),
       GoRoute(path: '/people', builder: (_, _) => const PeopleScreen()),

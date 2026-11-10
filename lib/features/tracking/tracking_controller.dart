@@ -10,6 +10,8 @@ import '../../app/providers.dart';
 import '../../data/models/activity_record.dart';
 import '../../data/models/adventure.dart';
 import '../rope/engine/geo.dart';
+import '../trails/trail_learner.dart';
+import '../trails/trail_store.dart';
 import 'position_stream.dart';
 import 'track_recorder.dart';
 
@@ -182,7 +184,11 @@ class TrackingController extends Notifier<TrackingState> {
 
   void _onPosition(geo.Position p) {
     if (state.status != TrackingStatus.recording) return;
-    final moving = !p.speed.isNaN && p.speed >= 0.5;
+    // Ignore delayed/cached GNSS readings. Otherwise a freshly opened app
+    // may display an old coordinate as the trekker's live position.
+    if (DateTime.now().difference(p.timestamp).abs() >
+        const Duration(seconds: 30)) return;
+    final moving = p.speed.isFinite && p.speed >= 0.5;
     if (moving || _movingAt == null) _movingAt = p.timestamp;
     final point = TrackPoint(
       lat: p.latitude,
@@ -194,7 +200,9 @@ class TrackingController extends Notifier<TrackingState> {
     );
     final accepted = _recorder.add(point);
     state = state.copyWith(
-      lastPosition: point.geo,
+      // A rejected or stationary-jitter fix must not move the live marker.
+      // Raw horizontal accuracy is still surfaced for a weak-GPS warning.
+      lastPosition: _recorder.last?.geo,
       accuracyM: p.accuracy,
       distanceM: _recorder.distanceM,
       gainM: _recorder.gainM,
@@ -264,6 +272,12 @@ class TrackingController extends Notifier<TrackingState> {
       'accuracyRatio': _recorder.accuracyRatio,
     }));
     await store.removeRaw(_snapshotKey);
+    // A solo walk on a known adventure teaches its trail too.
+    final adventureId = s.adventureId;
+    if (adventureId != null && _recorder.points.length >= 2) {
+      final walk = Walk(walkerId: ref.read(authProvider)?.id ?? 'me', at: startedAt, points: [for (final p in _recorder.points) p.geo]);
+      await ref.read(trailStoreProvider.notifier).addWalks(adventureId, [walk], own: walk);
+    }
     await ref.read(activitiesProvider.notifier).add(record);
     state = TrackingState(status: TrackingStatus.finished, type: s.type, finishedActivityId: id);
     return id;

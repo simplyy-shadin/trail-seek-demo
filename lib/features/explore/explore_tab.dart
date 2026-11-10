@@ -1,3 +1,4 @@
+import 'home_banners.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -54,11 +55,14 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        leading: IconButton(tooltip: 'My groups', onPressed: () => context.push('/groups'), icon: const Icon(Icons.groups_outlined)),
+        title: const Text('Explore'),
         actions: [IconButton(tooltip: 'Search programmes', onPressed: () => context.push('/adventures'), icon: const Icon(Icons.manage_search))],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110), // clear of the floating bottom bar
         children: [
+          const HomeBanners(inset: 0),
           Row(
             children: [
               Expanded(child: PillField(hint: 'State', value: _state, onTap: () => _pick('State', _states, 'Kerala', (v) => setState(() => _state = v)))),

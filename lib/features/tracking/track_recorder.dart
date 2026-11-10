@@ -44,20 +44,34 @@ class TrackPoint {
 /// Turns raw fixes into distance, elevation gain, altitude and moving time.
 ///
 /// Filters: poor accuracy, impossible speed (teleports), non-monotonic time.
+///
+/// Route points follow FitzTrack's run tracker: while the phone says it is
+/// moving, a point every [minMovementM] metres, so small turns on a trail
+/// stay in the line. Only when the phone reports standing still (or gives no
+/// speed) does the movement have to beat the GPS uncertainty, which keeps
+/// indoor drift out without cutting corners off a real walk.
 /// Altitude is smoothed with a rolling median and gain only counts climbs
 /// above a threshold so GPS jitter does not inflate it.
 class TrackRecorder {
   TrackRecorder({
-    this.maxAccuracyM = 25,
+    this.maxAccuracyM = 30,
     this.maxSpeedMps = 8,
     this.gainThresholdM = 3,
-    // Fewer accepted GPS fixes after drift suppression: a three-sample
-    // median reduces altitude lag while still rejecting short spikes.
-    this.altitudeWindow = 3,
+    // Points come every few metres again, so a five-sample median rejects
+    // altitude spikes without much lag.
+    this.altitudeWindow = 5,
     this.movingSpeedMps = 0.5,
     this.minMovementM = 5,
-    this.accuracyMovementFactor = 1.4,
+    this.preciseMovementM = 2.5,
+    this.preciseAccuracyM = 6,
+    this.accuracyMovementFactor = 1.0,
+    this.maxConsecutiveSpeedRejects = 5,
   });
+
+  /// After this many "too fast" fixes in a row the last accepted point was
+  /// the outlier: re-anchor on the new position without counting the jump.
+  final int maxConsecutiveSpeedRejects;
+  int _speedRejects = 0;
 
   final double maxAccuracyM;
   final double maxSpeedMps;
@@ -68,6 +82,11 @@ class TrackRecorder {
   /// Suppress GPS wandering while a phone is stationary. Movement must
   /// exceed both this floor and the uncertainty of the two fixes.
   final double minMovementM;
+
+  /// Record finer hairpins only when both fixes have good GNSS accuracy and
+  /// the phone reports walking. No continuous accelerometer polling is needed.
+  final double preciseMovementM;
+  final double preciseAccuracyM;
   final double accuracyMovementFactor;
 
   final List<TrackPoint> points = [];
@@ -113,22 +132,36 @@ class TrackRecorder {
       final d = haversineMetres(prev.geo, p.geo);
       final v = d / dt;
       if (v > maxSpeedMps) {
-        rejected++;
-        return false;
+        _speedRejects++;
+        if (_speedRejects < maxConsecutiveSpeedRejects) {
+          rejected++;
+          return false;
+        }
+        // Five "teleports" in a row: we were anchored on a bad fix. Start
+        // again from here; the jump itself is not walked distance.
+        _speedRejects = 0;
+        points.add(p);
+        _updateAltitude(p.altitudeM);
+        return true;
       }
-      // Indoors a stationary phone can wander many metres between fixes.
-      // Wait until the displacement exceeds the reported GPS uncertainty,
-      // then only count movement when it is also plausible over time.
-      final noiseFloor = math.max(
-        minMovementM,
-        accuracyMovementFactor * math.max(prev.accuracyM, p.accuracyM),
-      );
-      final reportedStationary = p.speedMps != null &&
-          p.speedMps!.isFinite && p.speedMps! >= 0 &&
-          p.speedMps! < movingSpeedMps;
-      if (d < noiseFloor ||
-          (reportedStationary &&
-              d < math.max(noiseFloor, 2 * math.max(prev.accuracyM, p.accuracyM)))) {
+      _speedRejects = 0;
+      final uncertainty = math.max(prev.accuracyM, p.accuracyM);
+      final speed = p.speedMps != null && p.speedMps!.isFinite && p.speedMps! >= 0 ? p.speedMps : null;
+      // The GPS chip measures speed from Doppler, independent of position
+      // noise: trust it to tell walking from standing.
+      final double floor;
+      if (speed != null && speed >= movingSpeedMps) {
+        // Good satellite fixes can preserve tighter S/C corners. Under a
+        // canopy, keep the 5 m floor to avoid turning noise into fake trails.
+        floor = uncertainty <= preciseAccuracyM
+            ? math.min(minMovementM, preciseMovementM)
+            : minMovementM;
+      } else if (speed != null) {
+        floor = math.max(minMovementM, 2 * uncertainty); // standing: ignore drift
+      } else {
+        floor = math.max(minMovementM, accuracyMovementFactor * uncertainty);
+      }
+      if (d < floor) {
         // A stationary or too-small change is not a bad GPS fix; it just
         // must not count toward distance or a drawn route.
         ignored++;
@@ -158,7 +191,8 @@ class TrackRecorder {
     } else if (smoothed - base >= gainThresholdM) {
       gainM += (smoothed - base).round();
       _gainBase = smoothed;
-    } else if (smoothed < base) {
+    } else if (base - smoothed >= gainThresholdM) {
+      // Only a real descent moves the base down; jitter both ways is ignored.
       _gainBase = smoothed;
     }
   }

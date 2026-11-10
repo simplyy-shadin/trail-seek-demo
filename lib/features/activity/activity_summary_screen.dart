@@ -13,6 +13,7 @@ import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
 import '../../data/models/activity_record.dart';
 import '../rope/engine/geo.dart';
+import '../rope/group_trails.dart';
 import '../settings/settings_controller.dart';
 import 'elevation_chart.dart';
 import 'share_card.dart';
@@ -40,6 +41,7 @@ class ActivitySummaryScreen extends ConsumerWidget {
     final cat = ActivityCategory.fromKey(a.type.name) ?? ActivityCategory.trekking;
     final d = a.duration;
     final route = track?.points.map((p) => p.geo).toList() ?? const <GeoPoint>[];
+    final group = ref.watch(groupTrailsProvider(a.id)).where((p) => !p.isSelf && p.points.length >= 2).toList();
 
     return Scaffold(
       body: CustomScrollView(
@@ -91,8 +93,9 @@ class ActivitySummaryScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (route.length >= 2) _RouteMap(route: route),
-                if (route.length >= 2) const SizedBox(height: 12),
+                if (route.length >= 2 || group.isNotEmpty) _RouteMap(route: route, group: group),
+                if (group.isNotEmpty) ...[const SizedBox(height: 8), _PathLegend(group: group)],
+                if (route.length >= 2 || group.isNotEmpty) const SizedBox(height: 12),
                 if (xp > 0)
                   TsCard(
                     highlighted: celebrate,
@@ -221,19 +224,24 @@ class ActivitySummaryScreen extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     await ref.read(trackStoreProvider).delete(a.id);
+    await ref.read(groupTrailStoreProvider).delete(a.id);
     await ref.read(activitiesProvider.notifier).remove(a.id);
     if (context.mounted) context.canPop() ? context.pop() : context.go('/home');
   }
 }
 
 class _RouteMap extends StatelessWidget {
-  const _RouteMap({required this.route});
+  const _RouteMap({required this.route, this.group = const []});
   final List<GeoPoint> route;
+
+  /// The other members' paths on a group trek.
+  final List<MemberPath> group;
 
   @override
   Widget build(BuildContext context) {
     final pts = route.map((p) => LatLng(p.lat, p.lng)).toList();
-    final bounds = LatLngBounds.fromPoints(pts);
+    final all = [...pts, for (final g in group) ...g.points.map((p) => LatLng(p.lat, p.lng))];
+    final bounds = LatLngBounds.fromPoints(all);
     return ClipRRect(
       borderRadius: BorderRadius.circular(TsSpace.radiusLg),
       child: SizedBox(
@@ -247,10 +255,23 @@ class _RouteMap extends StatelessWidget {
             ),
             children: [
               const TsTileLayer(),
-              PolylineLayer(polylines: [Polyline(points: pts, strokeWidth: 4, color: TsColors.neon)]),
+              PolylineLayer(polylines: [
+                for (final g in group)
+                  Polyline(points: g.points.map((p) => LatLng(p.lat, p.lng)).toList(), strokeWidth: 3, color: memberPathColor(g.memberIndex)),
+                if (pts.length >= 2) Polyline(points: pts, strokeWidth: 4, color: TsColors.neon),
+              ]),
               MarkerLayer(markers: [
-                Marker(point: pts.first, width: 14, height: 14, child: const DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white))),
-                Marker(point: pts.last, width: 14, height: 14, child: const DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: TsColors.neon))),
+                for (final g in group)
+                  Marker(
+                    point: LatLng(g.points.last.lat, g.points.last.lng),
+                    width: 10,
+                    height: 10,
+                    child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: memberPathColor(g.memberIndex), border: Border.all(color: Colors.white, width: 1.5))),
+                  ),
+                if (pts.length >= 2) ...[
+                  Marker(point: pts.first, width: 14, height: 14, child: const DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white))),
+                  Marker(point: pts.last, width: 14, height: 14, child: const DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: TsColors.neon))),
+                ],
               ]),
               tsAttribution,
             ],
@@ -258,6 +279,25 @@ class _RouteMap extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Who each line on the group map belongs to.
+class _PathLegend extends StatelessWidget {
+  const _PathLegend({required this.group});
+  final List<MemberPath> group;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget item(Color c, String name) => Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 14, height: 4, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 6),
+          Text(name, style: TsText.caption),
+        ]);
+    return Wrap(spacing: 14, runSpacing: 6, children: [
+      item(TsColors.neon, 'You'),
+      for (final g in group) item(memberPathColor(g.memberIndex), g.name.isEmpty ? 'Member ${g.memberIndex}' : g.name),
+    ]);
   }
 }
 

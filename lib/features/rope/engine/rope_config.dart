@@ -49,6 +49,18 @@ class RopeConfig {
   /// Heartbeats required to recover from an alerting state (hysteresis).
   final int recoveryHeartbeats;
 
+  /// Field-test profile for a responsive trek: warnings are still based on
+  /// *actual received packets*, not claimed metre-accurate BLE ranging.
+  /// Tune against iOS background throttling and forest false-positive rates.
+  static const fieldTest = RopeConfig(
+    heartbeatInterval: Duration(seconds: 2),
+    weakMissedHeartbeats: 3,
+    fallingBehindAfter: Duration(seconds: 15),
+    weakSustainedForFallingBehind: Duration(seconds: 20),
+    separatedAfter: Duration(seconds: 35),
+    criticalAfter: Duration(seconds: 90),
+  );
+
   /// Faster thresholds for demos and widget tests.
   static const demo = RopeConfig(
     heartbeatInterval: Duration(seconds: 1),

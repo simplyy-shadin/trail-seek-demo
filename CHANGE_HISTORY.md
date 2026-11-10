@@ -6,6 +6,16 @@
 >
 > **Updating policy:** On each **future push I make** to Trailseek, update this history alongside the code, including new/modified file names, changed lines, summary, test status and commit/PR references. Pushes made by other people are not captured automatically. Do not record untested code as field-tested.
 
+## 2026-11-10 — SmartTrace battery-balanced GPS improvement (PR #5 follow-up)
+
+- **Goal:** Improve small outdoor-turn sampling and stationary-marker stability while reducing needless GPS and Bluetooth work. This does *not* turn GPS into a metre-accurate indoor locator.
+- **`lib/features/tracking/position_stream.dart`:** Android balanced 2-second, 2-metre, high-accuracy requests instead of 1-second/0-metre best accuracy; disable explicit foreground CPU wake lock while keeping foreground notification. iOS remains `best` accuracy with 3-metre distance filter, fitness activity mode and active-session background location. Platform-specific battery and lock-screen behavior must be checked in the field.
+- **`lib/features/tracking/track_recorder.dart`:** Use a 2.5m minimum movement step *only* when reported walking and horizontal accuracy <= 6m, otherwise keep existing 5m floor. Avoid extra sensor polling, full Kalman/IMU dead reckoning, or increasing GPS frequency without evidence.
+- **`lib/features/tracking/tracking_controller.dart`:** Reject >30s stale position timestamps and keep the live marker at the last accepted route position rather than showing rejected GPS jitter.
+- **`lib/features/rope/rope_controller.dart`:** Share and timestamp only accepted GPS anchors instead of falsely refreshing a rejected coordinate; helps avoid stale BLE spacing warnings and reduces unnecessary position processing.
+- **`test/track_recorder_test.dart`:** Regression cases for tight good-GNSS turns versus poor-GNSS tiny movement.
+- **Verification:** Static code review performed; Flutter SDK not present in this environment, so Flutter tests/builds and battery profiling **not run locally**. Await CI and real iPhone/Android locked-screen trials. Do not claim measurable battery-life improvement yet.
+
 ## Latest status
 
 | Item | Status | Reference |
@@ -136,3 +146,40 @@ Copy this section above the existing latest entry, and replace the placeholders 
 ```
 
 **Rule:** Do not merge or mark field reliability as proven solely because a Dart simulation passes. Preserve the relevant PR/commit links so line ranges remain verifiable as source files evolve.
+
+## 2026-11-10 — Smart gap warnings, priority BLE safety traffic, GPS shutdown
+
+**Source:** user-provided `trailseek-main (1).zip`; this change must be reviewed
+and tested on iOS/Android devices before anyone depends on it for safety.
+
+**Files added**
+- `lib/features/rope/engine/distance_safety_monitor.dart`: GPS-only spacing
+  advisory, 75m warning / 150m urgent default, conservative uncertainty,
+  fresh and independent sample confirmation, hysteresis.
+- `lib/features/tracking/ref_counted_broadcast_stream.dart`: restartable shared
+  native GPS stream cancelled when the final listener disconnects.
+- `test/distance_safety_monitor_test.dart`,
+  `test/ref_counted_broadcast_stream_test.dart`: event and resource lifecycle tests.
+
+**Files changed**
+- `lib/features/rope/engine/rope_config.dart`: opt-in `fieldTest` heartbeat
+  timing profile with 15s falling-behind, 35s separated and 90s additional
+  critical escalation; default profile left unchanged for legacy tests.
+- `lib/features/rope/rope_controller.dart`: use field-test profile for actual
+  groups; evaluate fresh GPS group spacing independently of heartbeat state;
+  never trigger an SOS solely from estimated distance.
+- `lib/features/rope/rope_alerts.dart`: show notifications without waiting
+  for the haptic loop; independent GPS-spacing notifications that do not
+  replace the BLE-link state.
+- `lib/features/rope/links/ble_peer_link.dart`: priority GATT resync for urgent
+  actions and warnings; preempt best-effort breadcrumb fetches after SOS;
+  avoid waiting for advertising completion before starting priority sync.
+- `lib/features/tracking/position_stream.dart`: replace bare
+  `asBroadcastStream()` with reference-counted native stream lifecycle.
+
+**Limitations:** BLE RSSI is NOT precise range. Remote GPS accuracy is not
+transported in the current roster, so gap warnings are estimates and never
+loss-of-person verdicts. iPhone silent-mode audio bypass requires an Apple
+Critical Alerts entitlement and consent; this change does not attempt a
+bypass. No Flutter SDK was available in the patching environment, so Dart
+analysis, Flutter tests and physical-device testing remain outstanding.

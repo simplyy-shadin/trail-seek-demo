@@ -49,7 +49,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
         actions: [IconButton(onPressed: () => context.push('/settings'), icon: const Icon(Icons.settings_outlined))],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 110), // clear of the floating bottom bar
         children: [
           Row(
             children: [
@@ -85,7 +85,7 @@ class _ProfileTabState extends ConsumerState<ProfileTab> {
             0 => Builder(builder: (_) {
                 final dir = ref.watch(explorerDirectoryProvider).value;
                 final rank = dir == null ? null : 1 + dir.people.where((p) => p.xp > progress.totalXp).length;
-                return CharacterSheetView(sheet: CharacterSheet(ref.watch(activitiesProvider)), rank: user == null ? null : rank);
+                return CharacterSheetView(sheet: CharacterSheet(ref.watch(activitiesProvider)), rank: user == null ? null : rank, showLevel: false);
               }),
             1 => const _History(),
             _ => _Stats(progress, units, saved.length),

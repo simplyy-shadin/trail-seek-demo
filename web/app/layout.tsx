@@ -15,7 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <TopBar />
           <main className="wrap">{children}</main>
-          <footer className="wrap">Trail Seek · Explore, plan, go together · Thrissur, Kerala</footer>
+          <footer className="wrap">
+            Trail Seek · Explore, plan, go together · Thrissur, Kerala
+            <br />
+            <a href="/trailseek.apk">Download for Android</a> · <a href="/privacy.html">Privacy policy</a> · <a href="/terms.html">Terms</a>
+          </footer>
         </AuthProvider>
       </body>
     </html>

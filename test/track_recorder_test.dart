@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:trailseek/features/tracking/track_recorder.dart';
+import 'package:trailseek/features/rope/engine/geo.dart';
 
 /// Straight-line walk north at [speed] m/s with [climb] m total gain.
 List<TrackPoint> walk({int seconds = 600, double speed = 1.2, double climb = 120, double accuracy = 8}) {
@@ -145,4 +146,73 @@ void main() {
     expect(d.last.at, r.points.last.at);
     expect(d.length, lessThanOrEqualTo(r.points.length / 3 + 1));
   });
+
+  test('small turns stay in the line while walking under poor sky (FitzTrack spacing)', () {
+    // A switchback trail: 8 legs of 12 m, alternating east and north-west,
+    // walked at 1.2 m/s with 15 m GPS accuracy (typical under trees).
+    final r = TrackRecorder();
+    final start = DateTime.utc(2026, 11, 8, 6);
+    var lat = 10.3, lng = 76.5;
+    var t = 0;
+    final corners = <({double lat, double lng})>[];
+    for (var leg = 0; leg < 8; leg++) {
+      final (dLat, dLng) = leg.isEven ? (0.0, 0.000011) : (0.000008, -0.000008); // ~1.2 m per second
+      for (var s = 0; s < 10; s++) {
+        lat += dLat;
+        lng += dLng;
+        r.add(TrackPoint(lat: lat, lng: lng, at: start.add(Duration(seconds: t++)), accuracyM: 15, speedMps: 1.2));
+      }
+      corners.add((lat: lat, lng: lng));
+    }
+    // Every corner has a recorded point within 6 m: the zigzag is kept.
+    for (final c in corners.take(7)) {
+      final nearest = r.points.map((p) => haversineMetres(p.geo, GeoPoint(c.lat, c.lng))).reduce((a, b) => math.min(a, b));
+      expect(nearest, lessThan(6));
+    }
+    expect(r.points.length, greaterThanOrEqualTo(8));
+  });
+
+  test('a bad anchor is dropped after five impossible jumps in a row', () {
+    final r = TrackRecorder();
+    final start = DateTime.utc(2026, 11, 8, 6);
+    // First fix is a cell-tower guess 2 km away; the real walk starts after.
+    r.add(TrackPoint(lat: 10.32, lng: 76.5, at: start, accuracyM: 25));
+    for (var i = 1; i < 60; i++) {
+      r.add(TrackPoint(lat: 10.3 + i * 0.00005, lng: 76.5, at: start.add(Duration(seconds: i * 4)), accuracyM: 6, speedMps: 1.4));
+    }
+    expect(r.points.last.lat, closeTo(10.3 + 59 * 0.00005, 1e-9));
+    expect(r.distanceM, lessThan(400)); // the 2 km jump is not walked distance
+    expect(r.distanceM, greaterThan(250));
+  });
+  test('good fixes preserve small C-turn corners without extra GPS polling', () {
+    final r = TrackRecorder();
+    final at = DateTime.utc(2026, 11, 10, 12);
+    // 2.7m east then 2.7m north, repeated. A fixed 5m floor can skip
+    // the bend; a quality-aware floor keeps both legs if accuracy is good.
+    final coords = [
+      const GeoPoint(10.30, 76.50),
+      const GeoPoint(10.30, 76.500025),
+      const GeoPoint(10.300025, 76.500025),
+      const GeoPoint(10.300025, 76.500050),
+      const GeoPoint(10.300050, 76.500050),
+    ];
+    for (var i = 0; i < coords.length; i++) {
+      r.add(TrackPoint(lat: coords[i].lat, lng: coords[i].lng,
+          at: at.add(Duration(seconds: i * 3)), accuracyM: 3, speedMps: 1));
+    }
+    expect(r.points.length, coords.length);
+    expect(r.distanceM, greaterThan(10));
+  });
+
+  test('no extra tiny steps under poor canopy accuracy', () {
+    final r = TrackRecorder();
+    final at = DateTime.utc(2026, 11, 10, 12);
+    expect(r.add(TrackPoint(lat: 10.3, lng: 76.5, at: at,
+        accuracyM: 15, speedMps: 1)), isTrue);
+    expect(r.add(TrackPoint(lat: 10.3, lng: 76.500025,
+        at: at.add(const Duration(seconds: 3)),
+        accuracyM: 15, speedMps: 1)), isFalse);
+    expect(r.points.length, 1);
+  });
+
 }

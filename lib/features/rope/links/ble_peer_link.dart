@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart' show MethodChannel, MissingPluginException, PlatformException;
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../../../data/models/group_session.dart';
@@ -16,6 +16,7 @@ import 'rope_action_relay.dart';
 import 'rope_control_frame.dart';
 import 'rope_safety_relay.dart';
 import 'rope_security.dart';
+import 'rope_trail.dart';
 
 /// Cross-platform Bluetooth Low Energy transport for the Digital Rope.
 ///
@@ -42,6 +43,7 @@ class BlePeerLink implements PeerLink {
     this.onPosition,
     this.onStartRequest,
     this.onGroupEnd,
+    this.onTrail,
     this.onLog,
     this.syncInterval = const Duration(seconds: 10),
   });
@@ -58,6 +60,9 @@ class BlePeerLink implements PeerLink {
   /// Organizer: tell everyone the trek is over (rides on every heartbeat while true).
   bool ending = false;
 
+  /// More of a member's walked path arrived: [path] is their whole line so far.
+  final void Function(int memberIndex, List<TrailPoint> path)? onTrail;
+
   /// A newer GPS fix for another member, read from a neighbour's roster.
   final void Function(String memberId, MemberFix fix)? onPosition;
 
@@ -73,6 +78,12 @@ class BlePeerLink implements PeerLink {
 
   static final serviceUuid = UUID.fromString('7a5e0001-5eeb-4c0d-9e1a-7261696c7365');
   static final rosterCharacteristicUuid = UUID.fromString('7a5e0002-5eeb-4c0d-9e1a-7261696c7365');
+
+  /// Every member's breadcrumbs: write "what I have", read back what is missing.
+  static final trailCharacteristicUuid = UUID.fromString('7a5e0003-5eeb-4c0d-9e1a-7261696c7365');
+
+  /// Trail pages fetched per neighbour per sync (about 39 points each).
+  static const trailPagesPerSync = 8;
 
   final RopeConfig config;
   final Duration syncInterval;
@@ -106,6 +117,20 @@ class BlePeerLink implements PeerLink {
   Timer? _syncTimer;
   bool _advertising = false;
   bool _syncing = false;
+  bool _prioritySyncPending = false;
+  DateTime? _prioritizeUntil;
+
+  void _requestPrioritySync() {
+    _prioritizeUntil = DateTime.now().add(const Duration(seconds: 12));
+    if (_syncing) {
+      _prioritySyncPending = true;
+    } else {
+      unawaited(_syncRound());
+    }
+  }
+
+  bool get _priorityTraffic => _prioritizeUntil != null &&
+      DateTime.now().isBefore(_prioritizeUntil!);
   int _roundRobin = 0;
 
   /// memberIndex -> last time we heard them directly (gossip bitmap).
@@ -123,6 +148,14 @@ class BlePeerLink implements PeerLink {
   /// memberId -> newest GPS fix we know (our own and relayed), served in our roster.
   final Map<String, MemberFix> _positions = {};
 
+  /// Everyone's walked path (ours and relayed), and this run's id.
+  TrailBook _trail = TrailBook();
+  int _run = 0;
+
+  /// Central -> what it said it has (for the next read), and the page being read.
+  final Map<UUID, Map<TrailKey, int>> _trailHave = {};
+  final Map<UUID, Uint8List> _trailPage = {};
+
   /// Organizer only: the "start together" moment served to the group.
   DateTime? startAt;
 
@@ -139,11 +172,19 @@ class BlePeerLink implements PeerLink {
     await _beat();
   }
 
-  /// Our own GPS fix, shared with the group on the next roster read.
+  /// Our own GPS fix, shared with the group on the next roster read and
+  /// added to our walked path (one breadcrumb every few metres).
   void updateSelfPosition(double lat, double lng, DateTime at) {
     final id = _self?.id;
     if (id != null) _positions[id] = (lat: lat, lng: lng, at: at);
+    final index = _self?.memberIndex;
+    if (index != null && index != unassignedMemberIndex && _run != 0) {
+      _trail.addOwn((index: index, run: _run), TrailPoint(lat, lng, at));
+    }
   }
+
+  /// [memberIndex]'s whole walked path as this phone knows it.
+  List<TrailPoint> trailOf(int memberIndex) => _trail.pathOf(memberIndex);
 
   @override
   Stream<PeerObservation> get observations => _obs.stream;
@@ -166,10 +207,10 @@ class BlePeerLink implements PeerLink {
     if (self.memberIndex < 0 || self.memberIndex >= 16) return;
     final subject = s.members.where((m) => sameMember(m.id, subjectId)).firstOrNull;
     if (subject == null || subject.memberIndex < 0 || subject.memberIndex >= 16) return;
-    relay.create(reporterIndex: self.memberIndex, subjectIndex: subject.memberIndex,
-        signal: signal, now: DateTime.now());
-    await _beat(); // Fast, one-hop BLE advertisement while signal still exists.
-    if (!_syncing) unawaited(_syncRound()); // GATT pushes beyond the first hop.
+    relay.create(reporterIndex: self.memberIndex, subjectIndex: subject.memberIndex, signal: signal, now: DateTime.now());
+    // Do not block the urgent GATT relay behind an advertising restart.
+    _requestPrioritySync();
+    unawaited(_beat());
   }
 
   @override
@@ -206,6 +247,32 @@ class BlePeerLink implements PeerLink {
   /// ran next to the rope's link.
   bool get _abandoned => _stopped || _radioOwner != this;
   Timer? _syncKickoff;
+  Future<void>? _stopping;
+
+  /// stop() ran while start() was awaiting the radio: undo the step start()
+  /// just finished, unless a newer link already owns the radio.
+  Future<void> _undoHalfStart() async {
+    if (!_stopped || _radioOwner != null) return;
+    try {
+      await _central.stopDiscovery();
+    } catch (_) {}
+    try {
+      await _peripheral.removeAllServices();
+    } catch (_) {}
+  }
+
+  static const _btNameChannel = MethodChannel('trailseek/bt_name');
+
+  /// Android only: keep or give back the phone's real Bluetooth name (the
+  /// heartbeat is advertised as the adapter name while the rope runs).
+  static Future<void> _btName(String method) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _btNameChannel.invokeMethod<Object?>(method).timeout(const Duration(seconds: 3));
+    } on MissingPluginException {
+      // tests / other embedders
+    } catch (_) {}
+  }
 
   @override
   Future<void> start({required GroupSession session, required Member self}) async {
@@ -233,6 +300,11 @@ class BlePeerLink implements PeerLink {
     _pendingFlagBeats = 0;
     _pendingFlags = 0;
     _safetyRelay = SafetyAlertRelay(sessionHash: _sessionHash);
+    _trail = TrailBook();
+    _run = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    _trailHave.clear();
+    _trailPage.clear();
+    _rosterPage.clear();
 
     _log('start protected-group self=${self.displayName}#${self.memberIndex}');
     if (Platform.isAndroid) await _ensureAndroidPermissions();
@@ -241,11 +313,12 @@ class BlePeerLink implements PeerLink {
     await _waitPoweredOn(_peripheral);
     if (_abandoned) return;
     _log('radio on');
+    await _btName('remember');
 
     _subs.add(_central.discovered.listen(_onDiscovered));
 
     await _peripheral.removeAllServices();
-    if (_abandoned) return;
+    if (_abandoned) return _undoHalfStart();
     await _peripheral.addService(
       GATTService(
         uuid: serviceUuid,
@@ -258,10 +331,16 @@ class BlePeerLink implements PeerLink {
             permissions: const [GATTCharacteristicPermission.read, GATTCharacteristicPermission.write],
             descriptors: const [],
           ),
+          GATTCharacteristic.mutable(
+            uuid: trailCharacteristicUuid,
+            properties: const [GATTCharacteristicProperty.read, GATTCharacteristicProperty.write],
+            permissions: const [GATTCharacteristicPermission.read, GATTCharacteristicPermission.write],
+            descriptors: const [],
+          ),
         ],
       ),
     );
-    if (_abandoned) return;
+    if (_abandoned) return _undoHalfStart();
     _subs.add(_peripheral.characteristicReadRequested.listen(_onRosterRead));
     _subs.add(_peripheral.characteristicWriteRequested.listen(_onRosterWrite));
 
@@ -269,7 +348,7 @@ class BlePeerLink implements PeerLink {
       await _central.stopDiscovery();
     } catch (_) {}
     await _central.startDiscovery(serviceUUIDs: [serviceUuid]);
-    if (_abandoned) return;
+    if (_abandoned) return _undoHalfStart();
     _timer = Timer.periodic(config.heartbeatInterval, (_) => _beat());
     await _beat();
     _log('advertising + scanning');
@@ -284,7 +363,9 @@ class BlePeerLink implements PeerLink {
   }
 
   @override
-  Future<void> stop() async {
+  Future<void> stop() => _stopping ??= _stop().whenComplete(() => _stopping = null);
+
+  Future<void> _stop() async {
     _stopped = true;
     _timer?.cancel();
     _timer = null;
@@ -299,10 +380,14 @@ class BlePeerLink implements PeerLink {
     _rosterCipherCache = null;
     _rosterCacheAt = null;
     _lastHintSync.clear();
-    for (final s in _subs) {
+    _trailHave.clear();
+    _trailPage.clear();
+    _rosterPage.clear();
+    final subs = List.of(_subs);
+    _subs.clear();
+    for (final s in subs) {
       await s.cancel();
     }
-    _subs.clear();
     if (_radioOwner != this) {
       _log('stop (radio owned by a newer link; left running)');
       return;
@@ -311,12 +396,14 @@ class BlePeerLink implements PeerLink {
     try {
       await _central.stopDiscovery();
     } catch (_) {}
+    await (_beatChain ?? Future<void>.value()).catchError((_) {});
     if (_advertising) {
       try {
-        await _peripheral.stopAdvertising();
+        await _peripheral.stopAdvertising().timeout(const Duration(seconds: 3));
       } catch (_) {}
       _advertising = false;
     }
+    await _btName('restore');
     try {
       await _peripheral.removeAllServices();
     } catch (_) {}
@@ -337,17 +424,14 @@ class BlePeerLink implements PeerLink {
     // advertisement does not lose them.
     final self = _self;
     final relay = _actionRelay;
-    if (_stopped || self == null || relay == null ||
-        self.memberIndex < 0 || self.memberIndex >= 16) return;
-    final created = relay.create(
-      originIndex: self.memberIndex, type: message.type, now: DateTime.now(),
-    );
+    if (_stopped || self == null || relay == null || self.memberIndex < 0 || self.memberIndex >= 16) return;
+    final created = relay.create(originIndex: self.memberIndex, type: message.type, now: DateTime.now());
     _pendingActionSequence = created.sequence;
     _pendingFlags = flag;
     _pendingFlagBeats = 8;
     _msg.add(message);
-    await _beat();
-    if (!_syncing) unawaited(_syncRound());
+    _requestPrioritySync();
+    unawaited(_beat());
   }
 
   // ------------------------------------------------------------ heartbeats
@@ -377,14 +461,25 @@ class BlePeerLink implements PeerLink {
     );
   }
 
-  Future<void> _beat() async {
+  /// The plugin keeps one callback per advertising call, so two overlapping
+  /// beats would leave one waiting forever (End for everyone or SOS hanging).
+  /// Beats therefore run one after another, each with a time limit.
+  Future<void>? _beatChain;
+
+  Future<void> _beat() {
+    final next = (_beatChain ?? Future<void>.value()).then((_) => _beatOnce());
+    _beatChain = next;
+    return next;
+  }
+
+  Future<void> _beatOnce() async {
     if (_stopped) return;
     _seq = (_seq + 1) & 0xFF;
     final packet = _buildPacket();
     if (_pendingFlagBeats > 0) _pendingFlagBeats--;
     try {
-      if (_advertising) await _peripheral.stopAdvertising();
-      await _peripheral.startAdvertising(Advertisement(name: packet.encode(), serviceUUIDs: [serviceUuid]));
+      if (_advertising) await _peripheral.stopAdvertising().timeout(const Duration(seconds: 3));
+      await _peripheral.startAdvertising(Advertisement(name: packet.encode(), serviceUUIDs: [serviceUuid])).timeout(const Duration(seconds: 3));
       _advertising = true;
     } catch (_) {
       _advertising = false;
@@ -416,8 +511,7 @@ class BlePeerLink implements PeerLink {
     // Advertisements contain no room for a cryptographic tag, so treat all
     // manual actions, weak warnings and organizer controls as *untrusted hints*.
     // Only the authenticated GATT frames below may vibrate, start or end a group.
-    if (packet.flags != 0 || packet.safetySignal != null ||
-        packet.requestStart || packet.ending) {
+    if (packet.flags != 0 || packet.safetySignal != null || packet.requestStart || packet.ending) {
       final previous = _lastHintSync[packet.memberIndex];
       if (previous == null || now.difference(previous) > const Duration(seconds: 3)) {
         _lastHintSync[packet.memberIndex] = now;
@@ -454,8 +548,7 @@ class BlePeerLink implements PeerLink {
     final security = _security;
     if (security == null) return null;
     final now = DateTime.now();
-    if (_rosterCipherCache != null && _rosterCacheAt != null &&
-        now.difference(_rosterCacheAt!) < const Duration(seconds: 5)) {
+    if (_rosterCipherCache != null && _rosterCacheAt != null && now.difference(_rosterCacheAt!) < const Duration(seconds: 5)) {
       return _rosterCipherCache;
     }
     final data = await security.encryptRoster(_rosterBytes());
@@ -464,20 +557,69 @@ class BlePeerLink implements PeerLink {
     return data;
   }
 
+  /// Central -> the roster ciphertext it is reading. A long read takes several
+  /// requests; serving a fresh ciphertext (new nonce) halfway would fail its
+  /// authentication, so each reader keeps the copy it started with.
+  final Map<UUID, Uint8List> _rosterPage = {};
+
+  /// Every read gets an answer; silence would stall the reader for 30 s.
+  Future<void> _answer(GATTReadRequest request, Uint8List? value) async {
+    try {
+      if (value == null) {
+        await _peripheral.respondReadRequestWithError(request, error: GATTError.unlikelyError);
+      } else {
+        final offset = request.offset.clamp(0, value.length);
+        await _peripheral.respondReadRequestWithValue(request, value: value.sublist(offset));
+      }
+    } catch (error) {
+      _log('read response failed: $error');
+    }
+  }
+
   void _onRosterRead(GATTCharacteristicReadRequestedEventArgs e) {
+    if (e.characteristic.uuid == trailCharacteristicUuid) {
+      unawaited(_replyTrailPage(e));
+      return;
+    }
     unawaited(_replyEncryptedRoster(e));
   }
 
-  Future<void> _replyEncryptedRoster(GATTCharacteristicReadRequestedEventArgs e) async {
+  /// The points the reading phone is missing (by its last request), built at
+  /// offset 0 and kept for the rest of a long read.
+  Future<void> _replyTrailPage(GATTCharacteristicReadRequestedEventArgs e) async {
+    Uint8List? page;
     try {
-      final bytes = await _encryptedRosterBytes();
-      if (_stopped || bytes == null) return;
-      final offset = e.request.offset.clamp(0, bytes.length);
-      _peripheral.respondReadRequestWithValue(e.request, value: bytes.sublist(offset));
+      final security = _security;
+      if (!_stopped && security != null) {
+        final who = e.central.uuid;
+        page = _trailPage[who];
+        if (e.request.offset == 0 || page == null) {
+          page = await security.encryptTrail(_trail.encodeResponse(_trailHave[who] ?? const {}, maxBytes: RopeSecurity.maxRosterPlaintextBytes));
+          _trailPage[who] = page;
+        }
+      }
+    } catch (error) {
+      _log('trail page failed: $error');
+      page = null;
+    }
+    await _answer(e.request, page);
+  }
+
+  Future<void> _replyEncryptedRoster(GATTCharacteristicReadRequestedEventArgs e) async {
+    Uint8List? bytes;
+    try {
+      final who = e.central.uuid;
+      bytes = e.request.offset == 0 ? null : _rosterPage[who];
+      if (bytes == null) {
+        bytes = await _encryptedRosterBytes();
+        if (bytes != null) _rosterPage[who] = bytes;
+      }
+      if (_stopped) bytes = null;
     } catch (error) {
       _log('encrypted roster response failed: $error');
-      // Fail closed: never fall back to an unencrypted roster.
+      bytes = null; // Fail closed: never fall back to an unencrypted roster.
     }
+    await _answer(e.request, bytes);
   }
 
   void _onRosterWrite(GATTCharacteristicWriteRequestedEventArgs e) {
@@ -485,6 +627,14 @@ class BlePeerLink implements PeerLink {
     final payload = _security?.verifyMessage(e.request.value);
     if (payload == null) {
       _log('rejected unauthenticated BLE write');
+      return;
+    }
+    if (e.characteristic.uuid == trailCharacteristicUuid) {
+      final have = TrailBook.parseRequest(payload);
+      if (have != null) {
+        _trailHave[e.central.uuid] = have;
+        _trailPage.remove(e.central.uuid);
+      }
       return;
     }
     final control = RopeControlFrame.fromBytes(payload, now: DateTime.now());
@@ -528,15 +678,13 @@ class BlePeerLink implements PeerLink {
     if (s == null || self == null) return;
     final member = s.members.where((m) => m.memberIndex == control.originIndex).firstOrNull;
     if (member == null) return;
-    if (control.type == RopeControlType.requestStart && self.memberIndex == 0 &&
-        control.originIndex != 0) {
+    if (control.type == RopeControlType.requestStart && self.memberIndex == 0 && control.originIndex != 0) {
       final last = _requestSeen[member.id];
       if (last == null || DateTime.now().difference(last) > const Duration(seconds: 5)) {
         onStartRequest?.call(member);
       }
       _requestSeen[member.id] = DateTime.now();
-    } else if (control.type == RopeControlType.endGroup &&
-        control.originIndex == 0 && self.memberIndex != 0 && !_endSeen) {
+    } else if (control.type == RopeControlType.endGroup && control.originIndex == 0 && self.memberIndex != 0 && !_endSeen) {
       _endSeen = true;
       onGroupEnd?.call();
     }
@@ -549,8 +697,7 @@ class BlePeerLink implements PeerLink {
     // A 16-bit advertisement hash alone is not an identity credential: accept
     // only known indices from this session. The BLE session itself still needs
     // authenticated pairing before production safety guarantees are claimed.
-    if (!s.members.any((m) => m.memberIndex == alert.reporterIndex) ||
-        !s.members.any((m) => m.memberIndex == alert.subjectIndex)) return;
+    if (!s.members.any((m) => m.memberIndex == alert.reporterIndex) || !s.members.any((m) => m.memberIndex == alert.subjectIndex)) return;
     if (_safetyRelay?.accept(alert, now: now) != true) return;
     if (!_safetyAlerts.isClosed) _safetyAlerts.add(alert);
     // Advance newly learned warnings toward our other neighbours immediately.
@@ -560,23 +707,28 @@ class BlePeerLink implements PeerLink {
   void _receiveAction(RopeActionFrame action, DateTime now) {
     final group = _session;
     if (_stopped || group == null) return;
-    final member = group.members
-        .where((m) => m.memberIndex == action.originIndex).firstOrNull;
+    final member = group.members.where((m) => m.memberIndex == action.originIndex).firstOrNull;
     if (member == null || _actionRelay?.accept(action, now: now) != true) {
       return;
     }
     if (!_msg.isClosed) {
-      _msg.add(RopeMessage(
-        type: action.type, fromMemberId: member.id, at: action.sentAt,
-      ));
+      _msg.add(RopeMessage(type: action.type, fromMemberId: member.id, at: action.sentAt));
     }
     // Push toward neighbouring phones; on a busy sync round the next
     // scheduled round will pick up this queued event.
     if (!_syncing) unawaited(_syncRound());
   }
 
-  /// Hard ceiling for one roster exchange (connect + discover + write + read + disconnect).
+  /// Ceiling for one sync round. Checked between GATT steps (each has its own
+  /// time limit) instead of abandoning the round from outside: an abandoned
+  /// round kept talking to the radio while the next one started.
   static const _syncCap = Duration(seconds: 30);
+  DateTime _roundDeadline = DateTime.now();
+
+  /// Throws [TimeoutException] once the round is over time.
+  void _checkDeadline() {
+    if (_stopped || DateTime.now().isAfter(_roundDeadline)) throw TimeoutException('sync round over ${_syncCap.inSeconds}s');
+  }
 
   Future<void> _syncRound() async {
     if (_syncing || _stopped) return;
@@ -584,6 +736,7 @@ class BlePeerLink implements PeerLink {
     final self = _self;
     if (s == null || self == null) return;
     _syncing = true;
+    _roundDeadline = DateTime.now().add(_syncCap);
     try {
       final now = DateTime.now();
       final fresh = _peers.entries.where((p) => now.difference(p.value.lastSeen) < const Duration(seconds: 20)).toList();
@@ -599,8 +752,11 @@ class BlePeerLink implements PeerLink {
         }
         _status('Joining…');
         _log('sync -> organizer (join)');
-        await _syncWith(org.peripheral, join: JoinRequest(id: self.id, name: self.displayName, avatarId: self.avatarId), fromOrganizer: true)
-            .timeout(_syncCap);
+        await _syncWith(
+          org.peripheral,
+          join: JoinRequest(id: self.id, name: self.displayName, avatarId: self.avatarId),
+          fromOrganizer: true,
+        );
         return;
       }
       // Rotate through up to two nearby peers, strongest first, organizer always included when near.
@@ -616,8 +772,9 @@ class BlePeerLink implements PeerLink {
         return;
       }
       for (final p in picks.take(2)) {
+        if (DateTime.now().isAfter(_roundDeadline)) break;
         _log('sync -> #${p.key}');
-        await _syncWith(p.value.peripheral, fromOrganizer: p.key == 0).timeout(_syncCap);
+        await _syncWith(p.value.peripheral, fromOrganizer: p.key == 0);
       }
     } on TimeoutException {
       _log('sync round capped at ${_syncCap.inSeconds}s');
@@ -627,6 +784,14 @@ class BlePeerLink implements PeerLink {
       _status('Sync hiccup: $e');
     } finally {
       _syncing = false;
+      // An SOS that arrived mid-sync must not wait for the next 10-second
+      // timer; run a follow-up round after this GATT transaction releases.
+      if (_prioritySyncPending && !_stopped) {
+        _prioritySyncPending = false;
+        unawaited(Future<void>.delayed(const Duration(milliseconds: 250), () {
+          if (!_stopped) return _syncRound();
+        }));
+      }
     }
   }
 
@@ -640,11 +805,17 @@ class BlePeerLink implements PeerLink {
     final self = _self;
     if (s == null || self == null) return;
     try {
+      _checkDeadline();
       try {
         await _central.connect(peripheral).timeout(const Duration(seconds: 8));
-      } on PlatformException catch (e) {
+      } catch (e) {
+        // A connect that timed out or failed keeps trying inside Android and
+        // later steals the next attempt's callbacks: always close it.
+        try {
+          await _central.disconnect(peripheral).timeout(const Duration(seconds: 5));
+        } catch (_) {}
         // 133 = Android's generic GATT connect failure, usually a collision; one retry after a short pause.
-        if (!retried && (e.message ?? '').contains('133')) {
+        if (e is PlatformException && !retried && (e.message ?? '').contains('133')) {
           await Future<void>.delayed(const Duration(milliseconds: 800));
           return await _syncWith(peripheral, join: join, fromOrganizer: fromOrganizer, retried: true);
         }
@@ -656,9 +827,11 @@ class BlePeerLink implements PeerLink {
         } catch (_) {}
         final services = await _central.discoverGATT(peripheral).timeout(const Duration(seconds: 8));
         GATTCharacteristic? ch;
+        GATTCharacteristic? trailCh;
         for (final sv in services) {
           for (final c in sv.characteristics) {
             if (c.uuid == rosterCharacteristicUuid) ch = c;
+            if (c.uuid == trailCharacteristicUuid) trailCh = c;
           }
         }
         if (ch == null) return;
@@ -674,45 +847,29 @@ class BlePeerLink implements PeerLink {
             _status('This phone GATT MTU is too small for secure join.');
             return;
           }
-          await _central.writeCharacteristic(peripheral, ch,
-            value: joined, type: GATTCharacteristicWriteType.withResponse)
-            .timeout(const Duration(seconds: 8));
+          await _central.writeCharacteristic(peripheral, ch, value: joined, type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 8));
         }
         // Organizer/member control must also be MAC-protected; the
         // corresponding advertising bits only request an early sync.
-        if (self.memberIndex != unassignedMemberIndex &&
-            (requestingStart || ending)) {
+        if (self.memberIndex != unassignedMemberIndex && (requestingStart || ending)) {
           final kind = ending ? RopeControlType.endGroup : RopeControlType.requestStart;
-          final control = RopeControlFrame(
-            type: kind,
-            originIndex: self.memberIndex,
-            sequence: _controlSequence++ & 0xFF,
-            createdAt: DateTime.now(),
-          );
-          await _central.writeCharacteristic(peripheral, ch,
-            value: _security!.signMessage(control.toBytes()),
-            type: GATTCharacteristicWriteType.withResponse)
-            .timeout(const Duration(seconds: 5));
+          final control = RopeControlFrame(type: kind, originIndex: self.memberIndex, sequence: _controlSequence++ & 0xFF, createdAt: DateTime.now());
+          await _central.writeCharacteristic(peripheral, ch, value: _security!.signMessage(control.toBytes()), type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
         }
         // Push a few distinct, bounded 12-byte warnings over the same GATT
         // connection. Acknowledged writes and event IDs prevent relay loops;
         // no extra platform characteristic or pairing flow is required.
         final pending = _safetyRelay?.outgoing(DateTime.now(), limit: 3) ?? const <SafetyAlert>[];
         for (final alert in pending) {
-          await _central.writeCharacteristic(peripheral, ch,
-            value: _security!.signMessage(alert.toBytes()), type: GATTCharacteristicWriteType.withResponse)
-            .timeout(const Duration(seconds: 5));
+          await _central.writeCharacteristic(peripheral, ch, value: _security!.signMessage(alert.toBytes()), type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
         }
         // A GATT response confirms only this neighbour received the frame.
         // End-to-end delivery to everyone cannot be assumed.
-        final actions = _actionRelay?.pending(DateTime.now(), limit: 4)
-            ?? const <RopeActionFrame>[];
+        final actions = _actionRelay?.pending(DateTime.now(), limit: 4) ?? const <RopeActionFrame>[];
         for (final action in actions) {
-          await _central.writeCharacteristic(
-            peripheral, ch, value: _security!.signMessage(action.toBytes()),
-            type: GATTCharacteristicWriteType.withResponse,
-          ).timeout(const Duration(seconds: 5));
+          await _central.writeCharacteristic(peripheral, ch, value: _security!.signMessage(action.toBytes()), type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
         }
+        _checkDeadline();
         final bytes = await _central.readCharacteristic(peripheral, ch).timeout(const Duration(seconds: 8));
         final cleartext = await _security?.decryptRoster(bytes);
         if (cleartext == null) {
@@ -723,6 +880,11 @@ class BlePeerLink implements PeerLink {
         final snap = RosterSnapshot.fromBytes(cleartext);
         if (snap.sessionHash != _sessionHash) return;
         _applyRoster(snap, readAt: readAt, fromOrganizer: fromOrganizer || (snap.organizer != null && sameMember(snap.organizer!.id, s.organizerId)));
+        // Route syncing is best-effort. It must yield to safety/SOS traffic.
+        if (trailCh != null && self.memberIndex != unassignedMemberIndex &&
+            !_priorityTraffic && !_prioritySyncPending) {
+          await _pullTrails(peripheral, trailCh);
+        }
       } finally {
         try {
           await _central.disconnect(peripheral).timeout(const Duration(seconds: 5));
@@ -735,6 +897,50 @@ class BlePeerLink implements PeerLink {
         _lastTimeoutLog = now;
         _status('A nearby phone did not answer in time (retrying every few seconds)');
       }
+    }
+  }
+
+  /// Fetch every member's breadcrumbs this neighbour has and we do not, page
+  /// by page. Whatever we learn we serve on, so paths travel hop by hop.
+  Future<void> _pullTrails(Peripheral peripheral, GATTCharacteristic ch) async {
+    final security = _security;
+    if (security == null) return;
+    var maxWrite = 180;
+    try {
+      maxWrite = await _central.getMaximumWriteLength(peripheral, type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
+    } catch (_) {}
+    final grew = <int>{};
+    try {
+      for (var page = 0; page < trailPagesPerSync && !_stopped &&
+          !_priorityTraffic && !_prioritySyncPending; page++) {
+        _checkDeadline();
+        final request = security.signMessage(_trail.encodeRequest(maxBytes: maxWrite - 1 - RopeSecurity.tagBytes));
+        await _central.writeCharacteristic(peripheral, ch, value: request, type: GATTCharacteristicWriteType.withResponse).timeout(const Duration(seconds: 5));
+        final sealed = await _central.readCharacteristic(peripheral, ch).timeout(const Duration(seconds: 8));
+        final plain = await security.decryptTrail(sealed);
+        if (plain == null) {
+          _log('rejected unauthenticated trail page');
+          break;
+        }
+        final blocks = TrailBook.parseResponse(plain);
+        var added = 0;
+        for (final b in blocks) {
+          final fresh = _trail.merge(b.key, b.start, b.points);
+          if (fresh.isEmpty) continue;
+          added += fresh.length;
+          grew.add(b.key.index);
+        }
+        if (added == 0) break;
+      }
+    } finally {
+      // Points already merged must reach the map even if a later page failed:
+      // the next request reports them as had, so they are never sent again.
+      final selfIndex = _self?.memberIndex;
+      for (final index in grew) {
+        if (index == selfIndex) continue;
+        onTrail?.call(index, _trail.pathOf(index));
+      }
+      if (grew.isNotEmpty) _log('trail +${grew.length} members');
     }
   }
 
@@ -810,7 +1016,11 @@ class BlePeerLink implements PeerLink {
     try {
       await m.stateChanged.firstWhere((e) => e.state == BluetoothLowEnergyState.poweredOn).timeout(timeout);
     } on TimeoutException {
-      throw StateError('Bluetooth is ${m.state.name}. Turn it on to start the Digital Rope.');
+      throw StateError(switch (m.state) {
+        BluetoothLowEnergyState.unsupported => 'This phone has no Bluetooth Low Energy, so it cannot join the Digital Rope. Use a demo group instead.',
+        BluetoothLowEnergyState.unauthorized => 'Allow Nearby devices (Bluetooth) for Trail Seek in your phone settings.',
+        _ => 'Bluetooth is turned off. Turn it on to start the Digital Rope.',
+      });
     }
   }
 
