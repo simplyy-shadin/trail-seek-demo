@@ -89,85 +89,95 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ((_controller.value - 0.72) / 0.28).clamp(0.0, 1.0),
             );
 
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-              child: Column(
-                children: [
-                  const Spacer(flex: 4),
-
-                  // CONTINUOUS WORDMARK REVEAL
-                  SizedBox(
-                    width: 340,
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        const Text(
-                          'TrailSeek',
-                          maxLines: 1,
-                          softWrap: false,
-                          style: TextStyle(
-                            fontFamily: 'GreatVibes',
-                            fontSize: 82,
-                            color: Colors.transparent,
-                            height: 1.3,
-                          ),
-                        ),
-                        ClipRect(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: logoProgress,
-                            child: const Text(
+            return Stack(
+              children: [
+                // CENTRED WORDMARK AND TAGLINE
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 340,
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            const Text(
                               'TrailSeek',
                               maxLines: 1,
                               softWrap: false,
                               style: TextStyle(
                                 fontFamily: 'GreatVibes',
                                 fontSize: 82,
-                                fontWeight: FontWeight.normal,
-                                color: neonGreen,
+                                color: Colors.transparent,
                                 height: 1.3,
                               ),
                             ),
+                            ClipRect(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: logoProgress,
+                                child: const Text(
+                                  'TrailSeek',
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    fontFamily: 'GreatVibes',
+                                    fontSize: 82,
+                                    fontWeight: FontWeight.normal,
+                                    color: neonGreen,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // TAGLINE
+                      Opacity(
+                        opacity: taglineOpacity,
+                        child: const Text(
+                          'EXPLORE WITHOUT LIMITS',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 3,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // TAGLINE
-                  Opacity(
-                    opacity: taglineOpacity,
-                    child: const Text(
-                      'EXPLORE WITHOUT LIMITS',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 3,
                       ),
-                    ),
+                    ],
                   ),
+                ),
 
-                  const Spacer(flex: 4),
-
-                  // EXISTING ACTIONS
-                  AnimatedOpacity(
+                // BOTTOM ACTIONS
+                Positioned(
+                  left: 24,
+                  right: 24,
+                  bottom: 20,
+                  child: AnimatedOpacity(
                     opacity: _showActions ? 1 : 0,
                     duration: const Duration(milliseconds: 350),
                     child: IgnorePointer(
                       ignoring: !_showActions,
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           NeonButton(
                             label: 'Get Started',
                             onPressed: () => _go('signup'),
                           ),
+
                           const SizedBox(height: 14),
+
                           Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment:
+                                WrapCrossAlignment.center,
                             children: [
                               const Text(
                                 'Already have an account? ',
@@ -193,11 +203,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       ),
                     ),
                   ),
-
-                  if (!_showActions)
-                    const SizedBox(height: 40),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
