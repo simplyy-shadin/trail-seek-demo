@@ -25,6 +25,8 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
   String _district = 'Thrissur';
   String _type = 'All';
 
+  Color get activityColor => AdventureColors.forType(_type);
+
   static const districts = <String>[
     'All districts',
     'Thiruvananthapuram',
@@ -52,8 +54,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
     'Camping',
   ];
 
-  late final Future<List<_DiscoveryLead>> _leads =
-      _loadLeads();
+  late final Future<List<_DiscoveryLead>> _leads = _loadLeads();
 
   Future<List<_DiscoveryLead>> _loadLeads() async {
     final source = await rootBundle.loadString(
@@ -81,9 +82,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
           child: ListView(
             children: [
               const Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20, 18, 20, 10,
-                ),
+                padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
                 child: Text(
                   'Choose district',
                   style: TsText.h2,
@@ -97,7 +96,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
                         ? Icons.check_circle
                         : Icons.location_on_outlined,
                     color: d == _district
-                        ? TsColors.neon
+                        ? activityColor
                         : TsColors.textMuted,
                   ),
                   onTap: () => Navigator.pop(ctx, d),
@@ -139,9 +138,13 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
                     style: TsText.bodyStrong,
                   ),
                 ),
-                const Icon(
-                  Icons.keyboard_arrow_down,
-                  color: TsColors.neon,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    key: ValueKey(_type),
+                    color: activityColor,
+                  ),
                 ),
               ],
             ),
@@ -170,8 +173,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
           name.contains('tent');
     }
 
-    return programType == key ||
-        name.contains(key);
+    return programType == key || name.contains(key);
   }
 
   Widget _card({
@@ -184,71 +186,85 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: TsColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
+        decoration: BoxDecoration(
+          color: TsColors.surface,
           borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    color: TsColors.surfaceHigh,
-                    borderRadius:
-                        BorderRadius.circular(12),
+          border: Border.all(
+            color: activityColor.withValues(alpha: 0.22),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: activityColor.withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 31,
+                      color: activityColor,
+                    ),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 31,
-                    color: TsColors.neon,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TsText.bodyStrong,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TsText.caption,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        detail,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isExistingDestination
-                              ? TsColors.neon
-                              : TsColors.textMuted,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TsText.bodyStrong,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TsText.caption,
+                        ),
+                        const SizedBox(height: 6),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 350),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isExistingDestination
+                                ? activityColor
+                                : TsColors.textMuted,
+                          ),
+                          child: Text(
+                            detail,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Icon(
-                  onTap == null
-                      ? Icons.info_outline
-                      : Icons.chevron_right,
-                  color: TsColors.textMuted,
-                ),
-              ],
+                  Icon(
+                    onTap == null
+                        ? Icons.info_outline
+                        : Icons.chevron_right,
+                    color: activityColor,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -261,15 +277,11 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
     List<Adventure> adventures,
   ) {
     final matches = adventures
-        .where(
-          (a) => a.destinationId == destination.id,
-        )
+        .where((a) => a.destinationId == destination.id)
         .toList();
 
     if (_type != 'All' &&
-        !matches.any(
-          (a) => _matchesProgram(a, _type),
-        )) {
+        !matches.any((a) => _matchesProgram(a, _type))) {
       return const SizedBox.shrink();
     }
 
@@ -281,9 +293,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
       icon: Icons.forest_outlined,
       isExistingDestination: true,
       onTap: () {
-        context.push(
-          '/destination/${destination.id}',
-        );
+        context.push('/destination/${destination.id}');
       },
     );
   }
@@ -304,7 +314,53 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
       return Icons.landscape_outlined;
     }
 
+    if (_type == 'Hiking' ||
+        lead.types.contains('Hiking')) {
+      return Icons.hiking;
+    }
+
     return Icons.terrain;
+  }
+
+  Widget _typeChip(String type) {
+    final selected = _type == type;
+    final color = AdventureColors.forType(type);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+      decoration: BoxDecoration(
+        color: selected ? color : TsColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: selected
+              ? color
+              : TsColors.textMuted.withValues(alpha: 0.2),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          setState(() => _type = type);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 15,
+            vertical: 8,
+          ),
+          child: Text(
+            type,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected
+                  ? Colors.black
+                  : TsColors.textPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -329,8 +385,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
         actions: [
           IconButton(
             tooltip: 'Search programmes',
-            onPressed: () =>
-                context.push('/adventures'),
+            onPressed: () => context.push('/adventures'),
             icon: const Icon(Icons.manage_search),
           ),
         ],
@@ -380,8 +435,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
               Row(
                 children: [
                   _picker(_state, () {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
                           'Kerala is available. More states are planned.',
@@ -408,41 +462,14 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
               const SizedBox(height: 10),
 
               SizedBox(
-                height: 37,
+                height: 38,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: types.length,
                   separatorBuilder: (_, __) =>
                       const SizedBox(width: 8),
                   itemBuilder: (context, index) {
-                    final type = types[index];
-                    final selected = _type == type;
-
-                    return ChoiceChip(
-                      label: Text(type),
-                      selected: selected,
-                      showCheckmark: false,
-                      onSelected: (_) {
-                        setState(() => _type = type);
-                      },
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: selected
-                            ? TsColors.onNeon
-                            : TsColors.textPrimary,
-                      ),
-                      selectedColor: TsColors.neon,
-                      backgroundColor:
-                          TsColors.surfaceHigh,
-                      side: BorderSide.none,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 6,
-                      ),
-                      visualDensity:
-                          VisualDensity.compact,
-                    );
+                    return _typeChip(types[index]);
                   },
                 ),
               ),
@@ -468,8 +495,7 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
               const SizedBox(height: 14),
 
               // EXISTING DESTINATIONS
-              for (final destination
-                  in activeDestinations)
+              for (final destination in activeDestinations)
                 _destinationCard(
                   destination,
                   adventures,
@@ -504,13 +530,9 @@ class _ExploreTabState extends ConsumerState<ExploreTab> {
               if (snapshot.connectionState ==
                       ConnectionState.done &&
                   !snapshot.hasError &&
-                  activeCount +
-                          filteredLeads.length ==
-                      0)
+                  activeCount + filteredLeads.length == 0)
                 const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 32,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 32),
                   child: Text(
                     'No destinations found for this filter.',
                     textAlign: TextAlign.center,
@@ -540,8 +562,7 @@ class _DiscoveryLead {
       name: json['name'] as String,
       district: json['district'] as String,
       locality: json['locality'] as String,
-      types: (json['types'] as List)
-          .cast<String>(),
+      types: (json['types'] as List).cast<String>(),
     );
   }
 
