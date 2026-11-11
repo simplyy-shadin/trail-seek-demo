@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Kadamakkudy",
+    "district": "Ernakulam",
+    "locality": "Kochi",
+    "types": ["Kayaking"]
+  },
+  {
+    "name": "Thattekkad",
+    "district": "Ernakulam",
+    "locality": "Kothamangalam",
+    "types": ["Hiking"]
+  }
+]
