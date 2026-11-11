@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/adventure_colors.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/models/adventure.dart';
