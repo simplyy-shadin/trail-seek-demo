@@ -2,26 +2,26 @@
 import 'package:flutter/material.dart';
 
 abstract final class AdventureColors {
-  static const neonGreen = Color(0xFF9DFF1E);
-  static const neonBlue = Color(0xFF00CFFF);
-  static const neonOrange = Color(0xFFFF9D00);
-  static const neonPurple = Color(0xFFB58CFF);
-  static const neonLime = Color(0xFFD4FF52);
+  static const Color trekking = Color(0xFF9DFF1E);
+  static const Color hiking = Color(0xFFFF9500);
+  static const Color cycling = Color(0xFFFF3B30);
+  static const Color kayaking = Color(0xFF00CFFF);
+  static const Color camping = Color(0xFFB266FF);
 
   static Color forType(String type) {
     switch (type.toLowerCase()) {
       case 'trekking':
-        return neonGreen;
+        return trekking;
       case 'hiking':
-        return neonLime;
+        return hiking;
       case 'cycling':
-        return neonOrange;
+        return cycling;
       case 'kayaking':
-        return neonBlue;
+        return kayaking;
       case 'camping':
-        return neonPurple;
+        return camping;
       default:
-        return neonGreen;
+        return trekking;
     }
   }
 }
