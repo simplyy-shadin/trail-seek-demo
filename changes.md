@@ -1,5 +1,12 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #10 merged; game-map parity TODO expanded; PR #11 planned
+
+- **PR #10:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10 — merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). Flutter tests, Android debug APK, and unsigned iOS build all passed (Actions 43229202178 / 43229202331); hardware QA outstanding.
+- **`README.md` (Today, Pending, MapShifter-inspired TODO, milestones, stack):** added explicit remaining work for opt-in Fog of War, 6+ original map styles, themed markers, route guidance/voice, alternate routes/multi-stop, POI search/favorites, exploration rewards, CarPlay/watch/widgets; preserved GPS/BLE real-device safety gates.
+- **Next:** first actionable feature is PR #11 local Fog of War. No unauthorized background tracking, no third-party artwork and no safety-feature impairment.
+
+
 ## 2026-11-12 — PR #10: offline MBTiles health and coverage audits (draft)
 
 - **Branch:** `fix/offline-map-pack-integrity-coverage`. File verification is opt-in and runs SQLite integrity/metadata checks off the UI isolate; reports approximate publisher-supplied bounds and zoom range, never promises complete trail coverage.
