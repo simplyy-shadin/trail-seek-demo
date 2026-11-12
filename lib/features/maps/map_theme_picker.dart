@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'explore_game_map.dart';
+import 'fog_of_war_controller.dart';
 import 'map_tiles.dart';
 
 /// A single theme picker for Explore, solo recording and Digital Rope.
@@ -15,6 +16,7 @@ Future<void> showMapWorldPicker(BuildContext context) {
       builder: (context, ref, _) {
         final world = ref.watch(exploreMapThemeProvider);
         final classicLayer = ref.watch(mapStyleProvider);
+        final fog = ref.watch(fogOfWarProvider);
         return SafeArea(
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -51,6 +53,52 @@ Future<void> showMapWorldPicker(BuildContext context) {
                             .select(theme);
                         if (sheetContext.mounted) {
                           Navigator.of(sheetContext).pop();
+                        }
+                      },
+                    ),
+                  const Divider(),
+                  SwitchListTile.adaptive(
+                    key: const ValueKey('fog-of-war-toggle'),
+                    title: const Text('Fog of War — reveal as you explore'),
+                    subtitle: Text(
+                      'Optional, on this device only. Accepted solo GPS track '
+                      'points reveal areas; no extra GPS or group tracking. '
+                      '${fog.exploredCellCount} explored zones.',
+                    ),
+                    secondary: const Icon(Icons.explore_outlined),
+                    value: fog.enabled,
+                    onChanged: (enabled) => ref
+                        .read(fogOfWarProvider.notifier)
+                        .setEnabled(enabled),
+                  ),
+                  if (fog.exploredCellCount > 0)
+                    TextButton.icon(
+                      key: const ValueKey('fog-of-war-clear'),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Clear explored Fog of War history'),
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: sheetContext,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('Clear explored areas?'),
+                            content: const Text(
+                              'All locally stored explored zones will be '
+                              'removed. This cannot be undone.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext, false),
+                                child: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(dialogContext, true),
+                                child: const Text('Clear history'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          await ref.read(fogOfWarProvider.notifier).clearHistory();
                         }
                       },
                     ),
