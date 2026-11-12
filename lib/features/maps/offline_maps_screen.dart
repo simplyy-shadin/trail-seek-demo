@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
 import 'offline_areas.dart';
 import 'offline_vector_pack_section.dart';
+import 'offline_vector_region_section.dart';
 import 'tile_math.dart';
 
 class OfflineMapsScreen extends ConsumerWidget {
@@ -21,6 +22,8 @@ class OfflineMapsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
+          const OfflineVectorRegionSection(),
+          const SizedBox(height: 14),
           const OfflineVectorPacksSection(),
           const SizedBox(height: 18),
           TsCard(
@@ -112,7 +115,9 @@ class OfflineDownloadTile extends ConsumerWidget {
     final has = s.has(adventureId);
     return TsCard(
       padding: const EdgeInsets.all(12),
-      onTap: progress != null ? null : (has ? () => context.push('/settings/offline-maps') : onDownload),
+      // Legacy public-OSM raster bulk downloading is disabled until a licensed
+      // source is configured. Use the bounded OpenFreeMap vector flow instead.
+      onTap: progress != null ? null : () => context.push('/settings/offline-maps'),
       child: Row(
         children: [
           Icon(has ? Icons.offline_pin : Icons.download_for_offline_outlined, color: has ? TsColors.neon : TsColors.textMuted),
@@ -121,12 +126,12 @@ class OfflineDownloadTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(progress != null ? 'Downloading map… ${(progress * 100).round()}%' : (has ? 'Map available offline' : 'Download map for offline'), style: TsText.bodyStrong),
+                Text(progress != null ? 'Legacy map download… ${(progress * 100).round()}%' : (has ? 'Legacy raster map cached' : 'Download a game map for offline'), style: TsText.bodyStrong),
                 if (progress != null) ...[
                   const SizedBox(height: 6),
                   ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress, minHeight: 5)),
                 ] else
-                  Text(has ? 'Tiles for 3 km around the trail are on this phone' : 'Trailheads rarely have signal. Do this on Wi-Fi.', style: TsText.caption),
+                  Text(has ? 'Existing raster tiles are stored locally; coverage is limited.' : 'Choose a bounded vector download or import a licensed MBTiles pack.', style: TsText.caption),
               ],
             ),
           ),
