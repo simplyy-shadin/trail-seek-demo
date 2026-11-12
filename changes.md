@@ -1,5 +1,13 @@
 # Trailseek — Changes
 
+## 2026-11-13 — PR #13 merged; PR #14 themed destinations queued
+
+- **PR #13:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/13, squash merge [`f5e20a8`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/f5e20a88ec954afe40bc31abb41e1e0ae8f2abed).
+- **Automated checks:** Flutter analysis/tests [run 43293815016](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43293815016) and Android debug APK + unsigned iOS [run 43293815024](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43293815024) passed.
+- **`README.md`:** Today, SmartTrace status, Pending, game-map feature checklist and Milestones updated to reflect PR #13 merged, with physical-device camera-rotation, map readability and battery tests still unverified.
+- **Next:** contextual POI/destination iconography based on existing supplied destination metadata only (PR #14 candidate). Historical-route arrows are not navigation instructions; no new GPS/BLE subscriptions or Digital Rope map changes.
+
+
 ## 2026-11-13 — PR #13: static recorded-route direction arrows (draft)
 
 - **Branch:** `feat/recorded-route-direction-arrows` (after PR #12 merged). Does not alter accepted GPS samples or Digital Rope live safety map.
