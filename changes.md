@@ -1,5 +1,14 @@
 # Trailseek — Changes
 
+## 2026-11-13 — PR #13: static recorded-route direction arrows (draft)
+
+- **Branch:** `feat/recorded-route-direction-arrows` (after PR #12 merged). Does not alter accepted GPS samples or Digital Rope live safety map.
+- **New files:** `lib/features/maps/recorded_route_arrows.dart` (L1–end) geographic bearing/sampling/caps; `lib/features/maps/recorded_route_arrow_layer.dart` (L1–end) decorative chevrons, geometry cache; `test/recorded_route_arrows_test.dart` (L1–end) valid and invalid path regression tests; `docs/change-notes/2026-11-13-recorded-route-arrows.md` (L1–end) scope and QA.
+- **Modified:** `lib/features/tracking/tracking_screen.dart` (reuse accepted path mapping; arrows between polyline and position marker), `lib/features/activity/activity_summary_screen.dart` (saved solo route arrow preview); `README.md`, `changes.md`.
+- **Behavior:** existing GPS route only, at most 24 arrows, ~150 m nominal spacing, skip implausible 2-km+ segments, no turn-by-turn or animations; cache route geometry across one-second elapsed-time ticks to minimize CPU/battery cost.
+- **Validation:** Flutter/Android/iOS CI and iPhone/Android route/rotation/battery tests pending.
+
+
 ## 2026-11-13 — PR #12 merged; PR #13 recorded-route arrows next
 
 - **PR #12:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12; [`e0991b4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/e0991b47491d0020979264fc7a8053c5614a2776). Flutter tests/analyzer [run 43291388631](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43291388631), Android APK and unsigned iOS [run 43291388794](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43291388794) passed.
