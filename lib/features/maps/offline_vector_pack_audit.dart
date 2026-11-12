@@ -151,6 +151,6 @@ OfflinePackAudit _auditOfflineVectorPackSync(String path) {
       fileBytes: length,
     );
   } finally {
-    db?.dispose();
+    db?.close();
   }
 }
