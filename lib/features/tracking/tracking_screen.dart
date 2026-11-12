@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../app/theme.dart';
 import '../maps/explore_game_map.dart';
+import '../maps/recorded_route_arrow_layer.dart';
 import '../maps/fog_of_war_layer.dart';
 import '../maps/map_theme_picker.dart';
 import '../../core/widgets/widgets.dart';
@@ -29,9 +30,23 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
   bool _follow = true;
   bool _ready = false;
 
+  List<GeoPoint>? _lastAcceptedPath;
+  List<LatLng> _mappedAcceptedPath = const [];
+
+  List<LatLng> _routeLatLng(List<GeoPoint> path) {
+    // Reuse mapped geometry while the one-second activity ticker updates;
+    // TrackRecorder publishes a fresh list only for accepted GPS changes.
+    if (!identical(path, _lastAcceptedPath)) {
+      _lastAcceptedPath = path;
+      _mappedAcceptedPath = path.map(_ll).toList(growable: false);
+    }
+    return _mappedAcceptedPath;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = ref.watch(trackingProvider);
+    final routePoints = _routeLatLng(t.points);
     final ctrl = ref.read(trackingProvider.notifier);
     final units = ref.watch(unitsProvider);
 
@@ -70,7 +85,9 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
               const FogOfWarLayer(),
               if (t.adventureId != null) LearnedTrailLayer(adventureId: t.adventureId!),
               if (t.points.length > 1)
-                PolylineLayer(polylines: [Polyline(points: t.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.neon)]),
+                PolylineLayer(polylines: [Polyline(points: routePoints, strokeWidth: 5, color: TsColors.neon)]),
+              if (t.points.length > 1)
+                RecordedRouteArrowLayer(points: routePoints),
               if (pos != null)
                 MarkerLayer(markers: [
                   Marker(

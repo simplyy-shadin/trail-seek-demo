@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../maps/explore_game_map.dart';
+import '../maps/recorded_route_arrow_layer.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
 import '../../data/models/activity_record.dart';
@@ -260,6 +261,8 @@ class _RouteMap extends StatelessWidget {
                   Polyline(points: g.points.map((p) => LatLng(p.lat, p.lng)).toList(), strokeWidth: 3, color: memberPathColor(g.memberIndex)),
                 if (pts.length >= 2) Polyline(points: pts, strokeWidth: 4, color: TsColors.neon),
               ]),
+              if (pts.length > 1)
+                RecordedRouteArrowLayer(points: pts),
               MarkerLayer(markers: [
                 for (final g in group)
                   Marker(
