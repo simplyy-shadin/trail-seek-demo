@@ -178,33 +178,33 @@ class OfflineVectorPacksSection extends ConsumerWidget {
                             : () => _verify(context, pack),
                       ),
                       IconButton(
-                    tooltip: 'Delete ${pack.name}',
-                    icon: const Icon(Icons.delete_outline, color: TsColors.danger),
-                    onPressed: state.importing
-                        ? null
-                        : () async {
-                            final approved = await showDialog<bool>(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text('Delete offline map?'),
-                                content: Text('Remove ${pack.name} from this device?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(dialogContext, false),
-                                    child: const Text('Cancel'),
+                        tooltip: 'Delete ${pack.name}',
+                        icon: const Icon(Icons.delete_outline, color: TsColors.danger),
+                        onPressed: state.importing
+                            ? null
+                            : () async {
+                                final approved = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text('Delete offline map?'),
+                                    content: Text('Remove ${pack.name} from this device?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dialogContext, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => Navigator.pop(dialogContext, true),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
                                   ),
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(dialogContext, true),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (approved != true) return;
-                            await ref
-                                .read(offlineVectorPacksProvider.notifier)
-                                .delete(pack.id);
-                          },
+                                );
+                                if (approved != true) return;
+                                await ref
+                                    .read(offlineVectorPacksProvider.notifier)
+                                    .delete(pack.id);
+                              },
                       ),
                     ],
                   ),
