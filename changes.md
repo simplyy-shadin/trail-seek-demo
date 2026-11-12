@@ -4,7 +4,8 @@
 
 - Added Adventure RPG + Night Trek geographic vector basemaps and a persisted theme picker in Explore; Classic remains default and fallback.
 - New files: `assets/maps/styles/{adventure_rpg,night_trek}.json`, `lib/features/maps/explore_game_map.dart`, `test/explore_game_map_test.dart`, `docs/change-notes/2026-11-12-game-map-themes.md`.
-- Updated: `lib/features/explore/map_tab.dart`, `pubspec.yaml`, `changes.md`. No edits to GPS tracking or Digital Rope.
+- Updated: `lib/features/explore/map_tab.dart`, `pubspec.yaml`, `android/settings.gradle.kts`, `changes.md`. No edits to GPS tracking or Digital Rope.
+- **Build compatibility:** bumped Android Gradle Plugin 9.1.0 → 9.1.1 after CI reported Flutter's newer minimum; the existing Gradle wrapper was already compatible.
 - **Validation:** pending GitHub Actions; not field-tested. Detailed scope/line references in `docs/change-notes/2026-11-12-game-map-themes.md`.
 
 
