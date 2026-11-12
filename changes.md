@@ -1,11 +1,19 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #7 merged into `main`
+
+- **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7; **squash merge:** [`54d887f`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/54d887fb39493a080e6a222a2535c683b5f05880).
+- Reconciled README / changelog merge conflict without altering the previously tested map logic.
+- **Final CI:** Flutter tests [run 43219486314](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43219486314), Android APK and unsigned iOS build [run 43219486319](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43219486319) all passed.
+- **Outstanding:** iPhone/Android visual, GPS route, BLE overlay and battery field tests. Next milestone: offline vector packs.
+
+
 ## 2026-11-12 — PR #7 shared game maps (conflict resolution before merge)
 
 - **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7 — shared Adventure RPG / Night Trek / Classic basemaps across Explore, Solo Tracking, Digital Rope and saved route previews; common picker and regression tests.
-- **CI at PR head \`39eed3c\`:** Flutter checks, Android APK and unsigned iOS compilation passed (GitHub Actions runs \`43216910789\` and \`43216910777\`).
+- **CI at PR head `39eed3c`:** Flutter checks, Android APK and unsigned iOS compilation passed (GitHub Actions runs `43216910789` and `43216910777`).
 - **Device tests:** still pending; game-map styling does not validate BLE SOS/background alerts or GPS route precision.
-- **Files and ranges:** see \`docs/change-notes/2026-11-12-shared-game-maps.md\`. Main README and PR checklist kept intact.
+- **Files and ranges:** see `docs/change-notes/2026-11-12-shared-game-maps.md`. Main README and PR checklist kept intact.
 
 
 ## 2026-11-12 — README daily work plan and pending backlog
