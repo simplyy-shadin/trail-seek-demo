@@ -1,5 +1,19 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #10: offline MBTiles health and coverage audits (draft)
+
+- **Branch:** `fix/offline-map-pack-integrity-coverage`. File verification is opt-in and runs SQLite integrity/metadata checks off the UI isolate; reports approximate publisher-supplied bounds and zoom range, never promises complete trail coverage.
+- **New files:** `lib/features/maps/offline_vector_pack_audit.dart` (L1–end), `test/offline_vector_pack_audit_test.dart` (L1–end), `docs/change-notes/2026-11-12-offline-pack-integrity.md` (L1–end).
+- **Updated:** `lib/features/maps/offline_vector_pack_section.dart` (Verify UI), `lib/features/maps/offline_vector_packs.dart` (missing-file activation guard), `lib/features/maps/offline_vector_region_download.dart` (cleanup when final commit fails), `test/offline_vector_region_download_test.dart`, `test/offline_vector_packs_test.dart`, `README.md`, `changes.md`.
+- **Verification:** Flutter + Android + iOS CI pending; actual offline tile coverage, large-file scan and iPhone/Android verification need hardware tests.
+
+## 2026-11-12 — PR #9 merged into `main`
+
+- **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9; **squash commit:** [`a8f897e`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/a8f897e1ebd7b2ab3928573fd51f8ab328d51960).
+- **Final CI:** Flutter analysis/tests [run 43225584278](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43225584278); Android debug APK and unsigned iOS compilation [run 43225584279](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43225584279) passed.
+- **Field-test gap:** actual HTTP tile download, map display/label coverage, airplane mode, battery and iOS/Android runtime remain unverified.
+
+
 ## 2026-11-12 — PR #9: bounded online-to-offline vector region packs (draft)
 
 - **Branch:** `feat/bounded-offline-vector-region-download`. User-confirmed regional download uses existing Thrissur destinations, OpenFreeMap vector tile endpoint, 3 km radius/zoom 12–16, max 3,000 tiles and 50,000,000 bytes, single-request network concurrency and identifying User-Agent.
