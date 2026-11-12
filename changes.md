@@ -1,5 +1,12 @@
 # Trailseek — Changes
 
+## 2026-11-12 — README daily work plan and pending backlog
+
+- **Documentation update on `main`:** refreshed `README.md` (L1–end) with the 12 Nov work checklist, current PR #6 / PR #7 state, evidence-based build/field-test distinctions, prioritized pending items and an upkeep policy for every PR/work session.
+- **New file:** `.github/pull_request_template.md` (L1–end), requiring README Today/Pending review, `changes.md` updates, test evidence and safety-limit notes.
+- **Validation:** documentation-only, links to the already verified PR/Actions runs; no code or app behavior changed. The PR #7 device checks remain pending.
+
+
 ## 2026-11-12 — Explore game-themed maps (feature PR)
 
 - Added Adventure RPG + Night Trek geographic vector basemaps and a persisted theme picker in Explore; Classic remains default and fallback.
