@@ -1,12 +1,18 @@
 # Trailseek — Changes
 
-## 2026-11-12 — Shared game maps across journey screens (new feature PR)
+## 2026-11-12 — PR #7 shared game maps (conflict resolution before merge)
 
-- Unified Adventure RPG, Night Trek and Classic selections across Explore, Solo Tracking, Digital Rope and the saved-activity route preview.
-- Added reusable theme sheet, Classic Satellite/Standard/Terrain choices and two regression widget tests; route lines, member markers, GPS and BLE safety logic untouched.
-- New files: `lib/features/maps/map_theme_picker.dart`, `test/map_theme_picker_test.dart`, `docs/change-notes/2026-11-12-shared-game-maps.md`.
-- Updated: `lib/features/maps/{explore_game_map,map_tiles}.dart`, `lib/features/{explore/map_tab,tracking/tracking_screen,rope/live_tracking_screen,activity/activity_summary_screen}.dart`, `changes.md`.
-- **Verification:** pending new PR CI and device tests; vector tile offline pre-download still out of scope.
+- **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7 — shared Adventure RPG / Night Trek / Classic basemaps across Explore, Solo Tracking, Digital Rope and saved route previews; common picker and regression tests.
+- **CI at PR head \`39eed3c\`:** Flutter checks, Android APK and unsigned iOS compilation passed (GitHub Actions runs \`43216910789\` and \`43216910777\`).
+- **Device tests:** still pending; game-map styling does not validate BLE SOS/background alerts or GPS route precision.
+- **Files and ranges:** see \`docs/change-notes/2026-11-12-shared-game-maps.md\`. Main README and PR checklist kept intact.
+
+
+## 2026-11-12 — README daily work plan and pending backlog
+
+- **Documentation update on `main`:** refreshed `README.md` (L1–end) with the 12 Nov work checklist, current PR #6 / PR #7 state, evidence-based build/field-test distinctions, prioritized pending items and an upkeep policy for every PR/work session.
+- **New file:** `.github/pull_request_template.md` (L1–end), requiring README Today/Pending review, `changes.md` updates, test evidence and safety-limit notes.
+- **Validation:** documentation-only, links to the already verified PR/Actions runs; no code or app behavior changed. The PR #7 device checks remain pending.
 
 
 ## 2026-11-12 — Explore game-themed maps (feature PR)
