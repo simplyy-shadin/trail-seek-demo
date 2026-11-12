@@ -118,8 +118,17 @@ class OfflineVectorPacksController extends Notifier<OfflineVectorPacksState> {
       );
 
   Future<void> select(String? id) async {
-    if (id != null && !state.packs.any((pack) => pack.id == id)) {
-      throw ArgumentError.value(id, 'id', 'Unknown offline map pack');
+    if (id != null) {
+      final matches = state.packs.where((pack) => pack.id == id);
+      if (matches.isEmpty) {
+        throw ArgumentError.value(id, 'id', 'Unknown offline map pack');
+      }
+      if (!await File(matches.first.path).exists()) {
+        throw FileSystemException(
+          'Offline map file is missing. Delete this pack or import it again.',
+          matches.first.path,
+        );
+      }
     }
     state = OfflineVectorPacksState(packs: state.packs, activeId: id);
     await _persist();

@@ -114,6 +114,7 @@ Future<int> writeOfflineVectorRegion({
 
   final db = sqlite3.open(destination.path);
   var transactionOpen = false;
+  var committed = false;
   var completed = 0;
   var bytes = 0;
   try {
@@ -159,12 +160,15 @@ Future<int> writeOfflineVectorRegion({
     }
     db.execute('COMMIT');
     transactionOpen = false;
+    committed = true;
   } catch (_) {
     if (transactionOpen) db.execute('ROLLBACK');
     rethrow;
   } finally {
     db.close();
-    if (completed != plan.tiles.length && await destination.exists()) {
+    // An error *after* the final tile (e.g. COMMIT or progress callback)
+    // must not leave an incomplete archive that looks installed.
+    if (!committed && await destination.exists()) {
       await destination.delete();
     }
   }
