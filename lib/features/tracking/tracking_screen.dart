@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../app/theme.dart';
 import '../maps/explore_game_map.dart';
+import '../maps/recorded_route_arrow_layer.dart';
 import '../maps/fog_of_war_layer.dart';
 import '../maps/map_theme_picker.dart';
 import '../../core/widgets/widgets.dart';
@@ -71,6 +72,8 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
               if (t.adventureId != null) LearnedTrailLayer(adventureId: t.adventureId!),
               if (t.points.length > 1)
                 PolylineLayer(polylines: [Polyline(points: t.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.neon)]),
+              if (t.points.length > 1)
+                RecordedRouteArrowLayer(points: t.points.map(_ll).toList()),
               if (pos != null)
                 MarkerLayer(markers: [
                   Marker(
