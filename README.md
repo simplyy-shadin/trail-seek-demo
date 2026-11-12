@@ -12,9 +12,9 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 - [x] **Review and merge [PR #6](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/6)** — Adventure RPG and Night Trek Explore map styles. Flutter tests, Android debug APK and unsigned iOS compilation passed; squash merged as [`85a107c`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/85a107cc5f4df0831e1929479f92f7cc33500c5b). **Real-device rendering remains untested.**
 - [x] **Create [PR #7](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7)** — share game-themed maps across Explore, Solo Tracking, Digital Rope and Activity Summary; preserve the route and safety overlays. Open as **draft**, not merged.
 - [x] **Run Flutter analysis and automated tests for PR #7** — [CI run](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43216910789) succeeded.
-- [ ] **Complete and review PR #7 native builds** — [Android + iOS checks](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43216910777). Android debug APK passed at last check; unsigned iOS compilation was still running. Follow the linked live run rather than assuming the status is unchanged.
+- [x] **Verify PR #7 native builds** — [Android debug APK and unsigned iOS compilation](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43216910777) both **passed**. App installation, visual rendering and runtime behavior still require device checks.
 - [ ] **Verify Adventure RPG and Night Trek on physical iPhone and Android** — confirm roads/trails align with GPS and destination pins; verify labels, attribution, camera stability and theme persistence.
-- [ ] **Test PR #7 live maps before merge** — during Solo Tracking and Digital Rope sessions, confirm route lines, current/remote positions, weak-connection banners and SOS actions are never hidden by map styling.
+- [ ] **Review PR #7 on devices before merge** — during Solo Tracking and Digital Rope sessions, confirm route lines, current/remote positions, weak-connection banners and SOS actions are never hidden by map styling. CI is green; hardware acceptance and merge remain pending.
 - [ ] **Document offline map source/provider decision** — use approved providers or properly licensed/self-hosted data; no bulk offline downloading from the public OSM raster tile service.
 
 ## Current status at a glance
@@ -22,7 +22,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | Area | Repository / CI status | Still unverified or incomplete |
 | --- | --- | --- |
 | Game maps in Explore | **Merged in PR #6**: Adventure RPG, Night Trek, Classic fallback; vector map styles | Real-device cartography, performance, offline behavior |
-| Game maps across journeys | **PR #7 draft**: themes on Solo Tracking, Digital Rope and saved activity maps | Native build completion, manual GPS + BLE overlay testing, merge |
+| Game maps across journeys | **PR #7 draft**: themes on Solo Tracking, Digital Rope and saved activity maps; automated tests + both platform builds passed | Manual map/GPS/BLE overlay testing and merge |
 | Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist in code; previous CI passed | Trail curvature, indoor/forest accuracy, stopping lifecycle and battery **field** measurements |
 | Digital Rope BLE | Group safety engine, BLE transport, route markers and warnings are implemented in code | iOS locked/background behavior, multi-hop reliability, mixed iPhone/Android groups, alert latency and real battery use |
 | Offline maps | Raster tile cache and per-adventure download UI exist | Source licensing/provider, guaranteed offline **vector** map packs, airplane-mode coverage |
@@ -35,7 +35,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 
 | Priority | Task | Completion evidence |
 | --- | --- | --- |
-| **P0** | Finish PR #7 review and native builds; validate on-device map and overlays before merge | Android + iOS CI green, iPhone/Android screenshots or test notes, zero map-related safety regressions |
+| **P0** | Review PR #7 (CI green) and validate on-device map and overlays before merge | iPhone/Android screenshots or test notes, zero map-related safety regressions |
 | **P0** | Digital Rope field testing: iPhone↔iPhone, iPhone↔Android, Android↔Android, multi-hop, reconnection, locked-screen and weak-link alerts | Measured delays, false alerts, group reachability, battery and documented platform limitations |
 | **P0** | GPS SmartTrace real-world validation in forests, switchbacks, indoor/poor-GNSS areas, and start/pause/stop | Comparison with walked path and recorded accuracy, observed battery and lifecycle behavior |
 | **P1** | Authorized **offline vector maps** and style assets for Athirappilly, Vazhachal and Chimmony | Download, restart, offline/airplane-mode navigation and licensing checks |
@@ -51,7 +51,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 
 | Date | Change | Status |
 | --- | --- | --- |
-| **12 Nov 2026** | [PR #7 — shared game maps](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7) | **Open draft**; Flutter checks passed; native/device review pending |
+| **12 Nov 2026** | [PR #7 — shared game maps](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7) | **Open draft**; Flutter tests, Android APK and iOS compile passed; device review pending |
 | **12 Nov 2026** | [PR #6 — game-themed Explore maps](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/6) | **Merged**; CI passed; physical-device verification pending |
 | **10 Nov 2026** | [PR #5 — imported changes + SmartTrace/BLE safeguards](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/5) | **Merged**; CI passed; field performance unverified |
 
