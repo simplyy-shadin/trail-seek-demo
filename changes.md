@@ -1,5 +1,15 @@
 # Trailseek — Changes
 
+## 2026-11-13 — PR #12: six original Kerala game-map worlds (draft)
+
+- **Branch:** `feat/six-kerala-game-map-worlds`. Builds on PR #11 merged into `main`.
+- **New style assets:** `assets/maps/styles/monsoon_mist.json` (L1–end), `highland_quest.json` (L1–end), `coastal_explorer.json` (L1–end), `canopy_quest.json` (L1–end). Four original palettes; together with Adventure RPG and Night Trek these constitute six distinct game vector worlds, with Classic separate.
+- **Modified `lib/features/maps/explore_game_map.dart`:** six vector world enum cases, per-world accent and reused source/MBTiles mapping. `lib/features/maps/map_theme_picker.dart`: preview swatches for each world; `lib/features/explore/map_tab.dart`: destination pin contrast. Existing route overlays and Digital Rope logic not altered.
+- **Tests:** `test/explore_game_map_test.dart` verifies distinct backgrounds/trails, source URL, attribution, labels and persistence. `test/map_theme_picker_test.dart` exercises selecting Canopy Quest.
+- **Documentation:** `docs/change-notes/2026-11-13-six-kerala-game-worlds.md` (L1–end), `README.md`, `changes.md` updated with task and QA limits.
+- **CI:** Flutter tests/analyzer, Android and iOS compiles pending. Real-device offline/visual/battery checks remain pending even if CI green; theme worlds do not add routing or safety capabilities.
+
+
 ## 2026-11-13 — PR #11 merged; PR #12 original game worlds planned
 
 - **PR #11:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11, squash merge [`fc8390b`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/fc8390b3e5d0b8fab8e6591548431e902b678e7e). Flutter CI run [43265371561](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43265371561) and Android/iOS native smoke checks [43265371565](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43265371565) passed after fixing Dart `Path` class ambiguity; real iPhone/Android Fog of War QA remains pending.
