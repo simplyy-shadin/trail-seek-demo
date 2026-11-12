@@ -1,5 +1,14 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #11: Fog of War exploration (draft)
+
+- **Branch:** `feat/fog-of-war-exploration`; implements opt-in map fog with local coarse grid-cell reveal from already-accepted solo SmartTrace points (GPS accuracy ≤50 m), no extra location subscription and no Digital Rope live-map fog.
+- **New files:** `lib/features/maps/fog_of_war_controller.dart` (L1–end), `lib/features/maps/fog_of_war_layer.dart` (L1–end), `test/fog_of_war_test.dart` (L1–end), `docs/change-notes/2026-11-12-fog-of-war.md` (L1–end).
+- **Modified:** `lib/features/maps/map_theme_picker.dart` (toggle/clear history), `lib/features/explore/map_tab.dart` and `lib/features/tracking/tracking_screen.dart` (fog layer under markers/routes), `lib/features/tracking/tracking_controller.dart` (accepted GPS fix integration), `README.md` (Today/Pending/status), `changes.md`.
+- **Controls/limits:** default OFF, local-only coarse location history, 6,000-cell cap, opt-out, user-confirmed clear; no GPS accuracy or BLE safety behavior modified.
+- **Checks:** CI and physical-device Fog alignment/panning/zoom/battery testing pending. Visual overlay is gamification, not proof of safe/navigation-ready maps.
+
+
 ## 2026-11-12 — PR #10 merged; game-map parity TODO expanded; PR #11 planned
 
 - **PR #10:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10 — merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). Flutter tests, Android debug APK, and unsigned iOS build all passed (Actions 43229202178 / 43229202331); hardware QA outstanding.
