@@ -6,7 +6,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme.dart';
-import '../maps/map_tiles.dart';
+import '../maps/explore_game_map.dart';
+import '../maps/map_theme_picker.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/group_session.dart';
 import 'engine/geo.dart';
@@ -120,7 +121,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
               },
             ),
             children: [
-              const TsTileLayer(),
+              const ThemedMapBaseLayer(),
               // The trail other walkers made (nothing until 3+ people walked it).
               if (!rope.simulated) LearnedTrailLayer(adventureId: rope.adventure.id),
               if (rope.simulated)
@@ -205,7 +206,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                     ),
                 ],
               ),
-              tsAttribution,
+              const ThemedMapAttribution(),
             ],
           ),
           // Top bar
@@ -249,7 +250,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                           ],
                         ),
                       ),
-                      RoundIconButton(icon: Icons.layers_outlined, tooltip: 'Map style: ${ref.watch(mapStyleProvider).label}', onTap: () => ref.read(mapStyleProvider.notifier).toggle()),
+                      RoundIconButton(icon: Icons.layers_outlined, tooltip: 'Map world: ${ref.watch(exploreMapThemeProvider).label}', onTap: () => showMapWorldPicker(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
