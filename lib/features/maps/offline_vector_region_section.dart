@@ -144,7 +144,7 @@ class _OfflineVectorRegionSectionState
                     style: TsText.caption.copyWith(color: TsColors.warning)),
               const SizedBox(height: 8),
               const Text(
-                'Downloads are explicit and bounded by the tile provider's '
+                "Downloads are explicit and bounded by the tile provider's "
                 'offline terms. Missing regions remain unavailable without '
                 'internet. For safety, always carry an independent navigation '
                 'backup and perform field testing before relying on this map.',
