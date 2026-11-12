@@ -20,15 +20,15 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 - [x] **Merge [PR #9](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9)** — bounded Thrissur vector-region downloads; Flutter, Android and iOS checks passed. Squash commit [`a8f897e`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/a8f897e1ebd7b2ab3928573fd51f8ab328d51960). Device QA remains pending.
 - [x] **Merge [PR #10](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10)** — offline MBTiles audit and declared coverage, missing-file guard, failure cleanup; Flutter/Android/iOS CI passed, merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). On-device checks pending.
 - [x] **Merge [PR #11](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11)** — opt-in local Fog of War from accepted solo GPS fixes, privacy controls and tests. Flutter, Android and iOS CI passed; squash merged as [`fc8390b`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/fc8390b3e5d0b8fab8e6591548431e902b678e7e). Device QA pending.
-- [x] **Implement PR #12 draft** — four new original Kerala-inspired vector styles (Monsoon Mist, Highland Quest, Coastal Explorer, Canopy Quest), six game worlds + Classic total, shared picker swatches, Explore marker contrast, unit/widget tests; CI and device QA pending.
-- [ ] **Review PR #12 CI and merge when green** — Flutter analyzer/tests + Android debug APK + unsigned iOS compilation; native map rendering and offline MBTiles smoke QA remain separately pending.
+- [x] **Merge [PR #12](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12)** — six original game vector worlds + Classic, theme previews, marker colours and tests. Flutter, Android APK and unsigned iOS checks passed; squash commit [`e0991b4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/e0991b47491d0020979264fc7a8053c5614a2776). Device QA pending.
+- [ ] **Start PR #13 — route-direction chevrons** on existing solo and activity GPS tracklines; capped render count, stable headings, offline friendly, no extra GPS/BLE or group-SOS changes.
 - [ ] **Field-test the imported offline pack on devices** — after passing Flutter/Android/iOS CI, verify a real licensed MBTiles file, restart and airplane mode on both iPhone and Android.
 
 ## Current status at a glance
 
 | Area | Repository / CI status | Still unverified or incomplete |
 | --- | --- | --- |
-| Game maps in Explore | **PR #6 merged**: Adventure RPG and Night Trek; **PR #12 draft**: Monsoon Mist, Highland Quest, Coastal Explorer and Canopy Quest; Classic fallback | New styles' CI and real-device map readability, performance and offline behavior |
+| Game maps in Explore | **PR #12 merged**: six original vector worlds (Adventure RPG, Night Trek, Monsoon Mist, Highland Quest, Coastal Explorer, Canopy Quest) + Classic | iPhone/Android cartographic/label contrast, offline rendering and battery checks |
 | Game maps across journeys | **Merged in PR #7**: themed maps on Explore, Solo Tracking, Digital Rope and saved activity; **PR #11 merged**: opt-in Fog of War on Explore + Solo only | Physical-device Fog paint/zoom/pan and GPS/BLE safety overlay verification |
 | Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist in code; previous CI passed | Trail curvature, indoor/forest accuracy, stopping lifecycle and battery **field** measurements |
 | Digital Rope BLE | Group safety engine, BLE transport, route markers and warnings are implemented in code | iOS locked/background behavior, multi-hop reliability, mixed iPhone/Android groups, alert latency and real battery use |
@@ -52,8 +52,9 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | **P1** | Backend/auth, community sync, guide/booking access controls and privacy/security review | End-to-end tests and security checks rather than stub/demo behavior |
 | **P1** | Thrissur pilot destination data, access rules, permissions, guide and program information | Verified source-backed entries; unverified items remain labelled |
 | **P1** | Field-test merged PR #11 Fog of War on iPhone/Android | Local persistence, privacy opt-out/reset, fog repaint alignment and battery QA |
-| **P2** | Validate PR #12 six original game worlds, previews and marker contrast | Flutter JSON/style/widget tests, Android/iOS builds and manual source/road-label/attribution tests |
-| **P2** | Advanced game-themed route arrows, POI markers and animation | Design review, accessible route/marker labels, safe SOS overlay and low-power performance |
+| **P2** | Field-test PR #12 six original game worlds and themed destination pins | Flutter/Android/iOS CI green; physical devices' roads/trails, label contrast, attribution and offline coverage still pending |
+| **P2** | PR #13 route-direction chevrons on accepted solo GPS track and saved activity preview | Geometry tests, cap/skip bad segments, Flutter/Android/iOS CI, low-power/map QA; no navigation claims |
+| **P2** | More advanced game-themed POI icons, animations and live navigation graphics | Design review, accessible labels, map collision control and SOS-safe, low-power performance |
 | **P2** | Original exploration enhancements: adventure unlocks, Fog of War rewards, explorer passport and achievement polish | Product review, stored unlock data, UX/device validation |
 | **P2** | Turn-by-turn routes, voice guidance, alternate routes and multi-stop planning | Grounded routing provider/license, navigation tests and safety/accuracy evaluation |
 | **P2** | Place/landmark/business search and saved map locations | Verified place index, full search, favorites and privacy controls |
@@ -69,8 +70,8 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 - [x] **Classic / Adventure RPG / Night Trek selectable basemaps** — PRs #6–#7, theme selection applies to Explore, tracking, Digital Rope and activity previews; device polish pending.
 - [x] **Initial offline vector map packs** — PRs #8–#10; local MBTiles import, bounded download and file-health checks merged, device tests pending.
 - [x] **Fog of War / explored terrain — PR #11 merged** — opt-in local-only reveal from accepted solo GPS fixes, reset/history controls, no extra GPS, group safety map untouched; phone tests pending.
-- [ ] **At least six original game-world styles — PR #12 draft** — six vector styles coded (four new worlds beyond Adventure RPG/Night Trek), Classic separate. CI/native readability, attribution and offline MBTiles QA pending.
-- [ ] **Game-inspired navigation elements** — distinct destination icons, visible route line and configurable guidance arrows/animations that never mask SOS alerts.
+- [x] **At least six original game-world styles — PR #12 merged** — six vector styles (four new worlds beyond Adventure RPG/Night Trek), Classic separate. Flutter/Android/iOS CI passed, physical offline/contrast QA pending.
+- [ ] **Game-inspired route elements — PR #13 next** — add directional chevrons for existing solo/saved tracks; POI icons, turn-guidance graphics and animations remain pending, never mask SOS alerts.
 - [ ] **Turn-by-turn directions and voice guidance** — licensed routing and voice/navigation flow; not yet implemented.
 - [ ] **Alternate route suggestions and multi-stop trip planning** — source-verified routing and trail permission checks.
 - [ ] **Full places / restaurants / landmarks search and favorites** — distinguish verified Trailseek adventures from general POI data.
@@ -83,7 +84,8 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 
 | Date | Change | Status |
 | --- | --- | --- |
-| **13 Nov 2026** | PR #12 — six original vector game worlds (`feat/six-kerala-game-map-worlds`) | **Draft**; four new styles and tests committed, CI/native QA pending |
+| **13 Nov 2026** | PR #13 — recorded-route direction markers | **Next**; geometry and UI change queued |
+| **13 Nov 2026** | [PR #12 — six game worlds](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12) | **Merged** (`e0991b4`); Flutter/Android/iOS checks passed, device QA pending |
 | **13 Nov 2026** | [PR #11 — opt-in Fog of War](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11) | **Merged** (`fc8390b`); Flutter/Android/iOS CI passed, hardware QA pending |
 | **12 Nov 2026** | [PR #10 — offline MBTiles integrity and coverage](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10) | **Merged** (`5c72c8a`); Flutter/Android/iOS CI passed, device QA pending |
 | **12 Nov 2026** | [PR #9 — bounded vector region downloads](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9) | **Merged** (`a8f897e`); Flutter/Android/iOS checks passed, device QA pending |
