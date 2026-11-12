@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme.dart';
-import '../maps/map_tiles.dart';
+import '../maps/explore_game_map.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
 import '../../data/models/activity_record.dart';
@@ -254,7 +254,7 @@ class _RouteMap extends StatelessWidget {
               backgroundColor: TsColors.surface,
             ),
             children: [
-              const TsTileLayer(),
+              const ThemedMapBaseLayer(),
               PolylineLayer(polylines: [
                 for (final g in group)
                   Polyline(points: g.points.map((p) => LatLng(p.lat, p.lng)).toList(), strokeWidth: 3, color: memberPathColor(g.memberIndex)),
@@ -273,7 +273,7 @@ class _RouteMap extends StatelessWidget {
                   Marker(point: pts.last, width: 14, height: 14, child: const DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle, color: TsColors.neon))),
                 ],
               ]),
-              tsAttribution,
+              const ThemedMapAttribution(),
             ],
           ),
         ),
