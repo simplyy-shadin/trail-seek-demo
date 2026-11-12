@@ -38,6 +38,8 @@ dependencies:
   go_router: ^18.1.0
   flutter_map: ^8.3.2
   flutter_map_vector_tiles: ^2.11.0
+  flutter_map_vector_tiles_mbtiles: ^1.0.0
+  file_picker: ^13.3.3
   latlong2: ^0.10.1
   geolocator: ^14.1.1
   qr_flutter: ^4.1.0
