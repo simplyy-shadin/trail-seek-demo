@@ -88,6 +88,29 @@ void main() {
     expect(await file.exists(), isFalse);
   });
 
+  test('late error after the final tile deletes the uncommitted archive', () async {
+    final folder = await Directory.systemTemp.createTemp('trailseek-mbtiles-late-error');
+    addTearDown(() => folder.delete(recursive: true));
+    final file = File('${folder.path}/incomplete.mbtiles');
+    final plan = OfflineVectorRegionPlan(
+      name: 'Late failure',
+      south: 10, west: 76, north: 11, east: 77,
+      minZoom: 3, maxZoom: 3,
+      tiles: [const TileId(3, 4, 2)],
+    );
+    await expectLater(
+      writeOfflineVectorRegion(
+        destination: file,
+        plan: plan,
+        fetch: (_) async => Uint8List.fromList([0x1a, 0x00]),
+        cancelled: () => false,
+        onProgress: (_, __, ___) => throw StateError('Simulated write failure'),
+      ),
+      throwsStateError,
+    );
+    expect(await file.exists(), isFalse);
+  });
+
   test('oversized tile plan fails before opening a database', () async {
     final folder = await Directory.systemTemp.createTemp('trailseek-mbtiles-cap');
     addTearDown(() => folder.delete(recursive: true));
