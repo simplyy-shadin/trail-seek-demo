@@ -19,7 +19,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 - [x] **Merge [PR #8](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8)** — offline MBTiles import, validation, theme integration and regression tests; Flutter, Android and iOS CI passed. Squash commit [`25772c4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/25772c4609568ae350b2fe852adc47ad6cbbbb95).
 - [x] **Merge [PR #9](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9)** — bounded Thrissur vector-region downloads; Flutter, Android and iOS checks passed. Squash commit [`a8f897e`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/a8f897e1ebd7b2ab3928573fd51f8ab328d51960). Device QA remains pending.
 - [x] **Merge [PR #10](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10)** — offline MBTiles audit and declared coverage, missing-file guard, failure cleanup; Flutter/Android/iOS CI passed, merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). On-device checks pending.
-- [ ] **Start PR #11 — opt-in Fog of War exploration layer** — record *accepted solo tracking points only*, reveal travelled map zones, persist locally, add enable/reset controls and automated tests. Does not alter Digital Rope safety tracking.
+- [x] **Implement PR #11 Fog of War foundation on feature branch** — optional local-only map reveal from already-accepted SmartTrace solo GPS fixes, saved coarse grid cells, map picker toggle/history reset, regression tests; PR CI + device checks pending. No Digital Rope safety overlays changed.
 - [ ] **Field-test the imported offline pack on devices** — after passing Flutter/Android/iOS CI, verify a real licensed MBTiles file, restart and airplane mode on both iPhone and Android.
 
 ## Current status at a glance
@@ -27,7 +27,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | Area | Repository / CI status | Still unverified or incomplete |
 | --- | --- | --- |
 | Game maps in Explore | **Merged in PR #6**: Adventure RPG, Night Trek, Classic fallback; vector map styles | Real-device cartography, performance, offline behavior |
-| Game maps across journeys | **Merged in PR #7**: themes on Solo Tracking, Digital Rope and saved activity maps; Flutter, Android and iOS CI passed | Physical-device map/GPS/BLE overlay testing |
+| Game maps across journeys | **Merged in PR #7**: themed maps on Explore, Solo Tracking, Digital Rope and saved activity; **PR #11 draft** adds opt-in Fog of War on Explore + Solo only | Physical-device Fog paint/zoom/pan and GPS/BLE safety overlay verification |
 | Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist in code; previous CI passed | Trail curvature, indoor/forest accuracy, stopping lifecycle and battery **field** measurements |
 | Digital Rope BLE | Group safety engine, BLE transport, route markers and warnings are implemented in code | iOS locked/background behavior, multi-hop reliability, mixed iPhone/Android groups, alert latency and real battery use |
 | Offline maps | **PRs #8–#10 merged**: MBTiles import, bounded downloads, structural audits and declared coverage; CI green | iPhone/Android airplane-mode and actual coverage/battery tests; audit cannot prove map completeness |
@@ -49,7 +49,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | **P1** | Map polish: readable trails/labels, theme iconography, fallback and low-power performance | Screenshots and profile results on both platforms |
 | **P1** | Backend/auth, community sync, guide/booking access controls and privacy/security review | End-to-end tests and security checks rather than stub/demo behavior |
 | **P1** | Thrissur pilot destination data, access rules, permissions, guide and program information | Verified source-backed entries; unverified items remain labelled |
-| **P1** | PR #11 opt-in Fog of War — reveal walked areas from validated, accepted solo GPS fixes; no background GPS added | Local persistence, privacy toggle/reset, GPS noise controls, widget tests and both native builds |
+| **P1** | Complete PR #11 opt-in Fog of War and device review — reveal only accepted solo GPS fixes; no extra tracking | Local persistence, privacy opt-out/reset, tests and both native builds, FPS/battery QA on iPhone/Android |
 | **P2** | Six+ distinctive original game map worlds with themed route markers/arrows and animation | Design review, accessible labels, smooth performance, iOS/Android map QA |
 | **P2** | Original exploration enhancements: adventure unlocks, Fog of War rewards, explorer passport and achievement polish | Product review, stored unlock data, UX/device validation |
 | **P2** | Turn-by-turn routes, voice guidance, alternate routes and multi-stop planning | Grounded routing provider/license, navigation tests and safety/accuracy evaluation |
@@ -65,7 +65,7 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 
 - [x] **Classic / Adventure RPG / Night Trek selectable basemaps** — PRs #6–#7, theme selection applies to Explore, tracking, Digital Rope and activity previews; device polish pending.
 - [x] **Initial offline vector map packs** — PRs #8–#10; local MBTiles import, bounded download and file-health checks merged, device tests pending.
-- [ ] **Fog of War / explored terrain** — PR #11 next; optional local-only reveal from accepted solo GPS track points, reset/history controls, no extra GPS service, group safety map unaffected.
+- [ ] **Fog of War / explored terrain — PR #11 in review** — base implementation committed: opt-in local-only reveal from accepted solo GPS fixes, reset/history controls, no extra GPS, group safety map untouched; native CI/device validation pending.
 - [ ] **At least six original game-world styles** — design three or more additional Trailseek-specific styles; test readable labels in forests and low light.
 - [ ] **Game-inspired navigation elements** — distinct destination icons, visible route line and configurable guidance arrows/animations that never mask SOS alerts.
 - [ ] **Turn-by-turn directions and voice guidance** — licensed routing and voice/navigation flow; not yet implemented.
@@ -80,7 +80,7 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 
 | Date | Change | Status |
 | --- | --- | --- |
-| **12 Nov 2026** | PR #11 — Fog of War exploration | **Next**; local, opt-in GPS discovery design and tests |
+| **12 Nov 2026** | PR #11 — Fog of War exploration (`feat/fog-of-war-exploration`) | **Draft implementation**; CI and on-device experience tests pending |
 | **12 Nov 2026** | [PR #10 — offline MBTiles integrity and coverage](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10) | **Merged** (`5c72c8a`); Flutter/Android/iOS CI passed, device QA pending |
 | **12 Nov 2026** | [PR #9 — bounded vector region downloads](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9) | **Merged** (`a8f897e`); Flutter/Android/iOS checks passed, device QA pending |
 | **12 Nov 2026** | [PR #8 — offline MBTiles pack import](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8) | **Merged** (`25772c4`); Flutter/Android/iOS CI passed; device validation pending |
