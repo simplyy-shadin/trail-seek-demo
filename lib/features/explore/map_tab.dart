@@ -10,6 +10,7 @@ import '../../core/widgets/big_cards.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/destination.dart';
 import '../maps/map_tiles.dart';
+import '../maps/explore_game_map.dart';
 
 /// Map tab: every Thrissur destination as a pin; tap one for its card.
 /// Group treks (Digital Rope) start from here too.
@@ -22,14 +23,56 @@ class MapTab extends ConsumerStatefulWidget {
 class _MapTabState extends ConsumerState<MapTab> {
   Destination? _picked;
 
+  void _showMapThemes(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Consumer(
+        builder: (context, ref, _) {
+          final selected = ref.watch(exploreMapThemeProvider);
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text('Choose your map world', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                ),
+                for (final theme in ExploreMapTheme.values)
+                  ListTile(
+                    leading: Icon(theme.icon),
+                    title: Text(theme.label),
+                    subtitle: Text(theme.description),
+                    selected: selected == theme,
+                    trailing: selected == theme ? const Icon(Icons.check_circle) : null,
+                    onTap: () async {
+                      await ref.read(exploreMapThemeProvider.notifier).select(theme);
+                      if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                    },
+                  ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final destinations = ref.watch(destinationsProvider).value ?? const <Destination>[];
     final active = ref.watch(activeSessionProvider);
+    final exploreTheme = ref.watch(exploreMapThemeProvider);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: 'Game map themes',
+            icon: const Icon(Icons.layers_outlined),
+            onPressed: () => _showMapThemes(context),
+          ),
           TextButton.icon(onPressed: () => context.push('/groups'), icon: const Icon(Icons.groups, size: 20), label: const Text('Groups')),
         ],
       ),
@@ -43,7 +86,10 @@ class _MapTabState extends ConsumerState<MapTab> {
               onTap: (_, _) => setState(() => _picked = null),
             ),
             children: [
-              const TsTileLayer(),
+              if (exploreTheme == ExploreMapTheme.classic)
+                const TsTileLayer()
+              else
+                ExploreGameTileLayer(theme: exploreTheme),
               MarkerLayer(markers: [
                 for (final d in destinations)
                   Marker(
@@ -56,7 +102,12 @@ class _MapTabState extends ConsumerState<MapTab> {
                     ),
                   ),
               ]),
-              tsAttribution,
+              if (exploreTheme == ExploreMapTheme.classic)
+                tsAttribution
+              else
+                const SimpleAttributionWidget(
+                  source: Text('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap'),
+                ),
             ],
           ),
           if (active != null)
