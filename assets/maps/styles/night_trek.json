@@ -1,0 +1,440 @@
+{
+  "version": 8,
+  "name": "Trailseek Night Trek",
+  "metadata": {
+    "trailseek:purpose": "Explore screen game theme proof of concept"
+  },
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet/latest",
+      "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+    }
+  },
+  "layers": [
+    {
+      "id": "ground",
+      "type": "background",
+      "paint": {
+        "background-color": "#0D181B"
+      }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landcover",
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "wood",
+            "forest"
+          ],
+          "#174538",
+          [
+            "grass",
+            "scrub"
+          ],
+          "#254B42",
+          [
+            "farmland",
+            "crop"
+          ],
+          "#243B36",
+          "#254B42"
+        ],
+        "fill-opacity": 0.88
+      }
+    },
+    {
+      "id": "landuse",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "landuse",
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "park",
+            "national_park",
+            "nature_reserve"
+          ],
+          "#255C45",
+          [
+            "forest",
+            "wood"
+          ],
+          "#174538",
+          [
+            "farmland",
+            "orchard",
+            "vineyard"
+          ],
+          "#243B36",
+          "#0D181B"
+        ],
+        "fill-opacity": 0.62
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#17445C"
+      }
+    },
+    {
+      "id": "river",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "waterway",
+      "paint": {
+        "line-color": "#54BBD0",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          7,
+          0.7,
+          13,
+          2.4
+        ]
+      }
+    },
+    {
+      "id": "boundaries",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "boundary",
+      "minzoom": 6,
+      "paint": {
+        "line-color": "#51746C",
+        "line-width": 0.8,
+        "line-dasharray": [
+          3,
+          2
+        ],
+        "line-opacity": 0.7
+      }
+    },
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "openmaptiles",
+      "source-layer": "building",
+      "minzoom": 13,
+      "paint": {
+        "fill-color": "#344A48",
+        "fill-opacity": 0.85
+      }
+    },
+    {
+      "id": "major-road-outline",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "motorway",
+            "trunk",
+            "primary",
+            "secondary"
+          ]
+        ]
+      ],
+      "paint": {
+        "line-color": "#334A48",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          7,
+          2,
+          14,
+          7.5
+        ]
+      }
+    },
+    {
+      "id": "major-roads",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "motorway",
+            "trunk",
+            "primary",
+            "secondary"
+          ]
+        ]
+      ],
+      "paint": {
+        "line-color": "#B5C3B1",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          7,
+          1.1,
+          14,
+          5
+        ]
+      }
+    },
+    {
+      "id": "minor-roads",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 10,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "tertiary",
+            "residential",
+            "service",
+            "living_street",
+            "unclassified"
+          ]
+        ]
+      ],
+      "paint": {
+        "line-color": "#708C80",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.7,
+          15,
+          2.6
+        ]
+      }
+    },
+    {
+      "id": "adventure-trails",
+      "type": "line",
+      "source": "openmaptiles",
+      "source-layer": "transportation",
+      "minzoom": 11,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "path",
+            "footway",
+            "track",
+            "steps",
+            "pedestrian",
+            "bridleway"
+          ]
+        ]
+      ],
+      "paint": {
+        "line-color": "#84E5BB",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          0.9,
+          15,
+          2.4
+        ],
+        "line-dasharray": [
+          2,
+          1.7
+        ]
+      }
+    },
+    {
+      "id": "place-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "minzoom": 5,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:latin"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          5,
+          10,
+          14,
+          15
+        ],
+        "text-max-width": 11,
+        "text-font": [
+          "Noto Sans Regular"
+        ]
+      },
+      "paint": {
+        "text-color": "#ECF6E7",
+        "text-halo-color": "#122B2C",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "water-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "water_name",
+      "minzoom": 10,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:latin"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-size": 11,
+        "text-max-width": 11,
+        "text-font": [
+          "Noto Sans Regular"
+        ]
+      },
+      "paint": {
+        "text-color": "#ECF6E7",
+        "text-halo-color": "#122B2C",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "road-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "transportation_name",
+      "minzoom": 13,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:latin"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-size": 10,
+        "text-max-width": 11,
+        "text-font": [
+          "Noto Sans Regular"
+        ]
+      },
+      "paint": {
+        "text-color": "#ECF6E7",
+        "text-halo-color": "#122B2C",
+        "text-halo-width": 1.4
+      }
+    },
+    {
+      "id": "poi-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 14,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:latin"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-size": 10,
+        "text-max-width": 11,
+        "text-font": [
+          "Noto Sans Regular"
+        ]
+      },
+      "paint": {
+        "text-color": "#ECF6E7",
+        "text-halo-color": "#122B2C",
+        "text-halo-width": 1.4
+      }
+    }
+  ]
+}
