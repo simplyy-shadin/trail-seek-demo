@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,7 +50,7 @@ class _FogPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final fog = Path()..fillType = PathFillType.evenOdd;
+    final fog = ui.Path()..fillType = ui.PathFillType.evenOdd;
     fog.addRect(Offset.zero & size);
 
     for (final location in visited) {
