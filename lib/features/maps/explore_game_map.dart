@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_vector_tiles/flutter_map_vector_tiles.dart' as vt;
+import 'package:flutter_map_vector_tiles_mbtiles/flutter_map_vector_tiles_mbtiles.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import 'map_tiles.dart';
+import 'offline_vector_packs.dart';
 
 /// Shared map appearance for Explore, live Solo Tracking, Digital Rope and
 /// the route preview. The historical preference key is retained to preserve
@@ -66,6 +68,31 @@ final exploreVectorStyleProvider =
   return style;
 });
 
+/// A user-selected local MBTiles archive replaces only the vector source
+/// named openmaptiles. Both theme JSON files are bundled, and no vector tile
+/// requests are made to OpenFreeMap while this provider is selected.
+final offlineGameVectorStyleProvider =
+    FutureProvider.family<vt.Style, (ExploreMapTheme, String)>(
+  (ref, selection) async {
+    final (theme, path) = selection;
+    final uri = theme.styleUri;
+    if (uri == null) throw StateError('Classic has no vector tiles');
+
+    final archive = await MbTilesVectorTileProvider.open(path);
+    try {
+      final style = await vt.StyleReader(
+        uri: uri,
+        resolveProvider: (id) async => id == 'openmaptiles' ? archive : null,
+      ).read();
+      ref.onDispose(style.dispose);
+      return style;
+    } catch (_) {
+      archive.dispose();
+      rethrow;
+    }
+  },
+);
+
 /// Substitutes a styled vector basemap without changing any map overlays,
 /// recorded route geometry, member positions or safety alert state.
 class ExploreGameTileLayer extends ConsumerWidget {
@@ -75,7 +102,10 @@ class ExploreGameTileLayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final loaded = ref.watch(exploreVectorStyleProvider(theme));
+    final selectedPack = ref.watch(offlineVectorPacksProvider).active;
+    final loaded = selectedPack == null
+        ? ref.watch(exploreVectorStyleProvider(theme))
+        : ref.watch(offlineGameVectorStyleProvider((theme, selectedPack.path)));
     return loaded.when(
       data: (style) => vt.VectorTileLayer(
         theme: style.theme,
@@ -112,10 +142,15 @@ class ThemedMapAttribution extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final world = ref.watch(exploreMapThemeProvider);
-    return world == ExploreMapTheme.classic
-        ? tsAttribution
-        : const SimpleAttributionWidget(
-            source: Text('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap'),
-          );
+    final pack = ref.watch(offlineVectorPacksProvider).active;
+    if (world == ExploreMapTheme.classic) return tsAttribution;
+    if (pack != null) {
+      return SimpleAttributionWidget(
+        source: Text('Offline MBTiles · ${pack.attribution ?? 'Map data attribution in pack details'}'),
+      );
+    }
+    return const SimpleAttributionWidget(
+      source: Text('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap'),
+    );
   }
 }
