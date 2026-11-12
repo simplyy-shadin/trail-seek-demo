@@ -37,6 +37,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   go_router: ^18.1.0
   flutter_map: ^8.3.2
+  flutter_map_vector_tiles: ^2.11.0
   latlong2: ^0.10.1
   geolocator: ^14.1.1
   qr_flutter: ^4.1.0
@@ -84,6 +85,7 @@ flutter:
 
   assets:
     - assets/data/
+    - assets/maps/styles/
     - assets/images/
     - assets/images/thrissur/
     - assets/images/people/
