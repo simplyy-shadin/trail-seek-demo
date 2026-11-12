@@ -1,5 +1,12 @@
 # Trailseek — Changes
 
+## 2026-11-13 — PR #11 merged; PR #12 original game worlds planned
+
+- **PR #11:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11, squash merge [`fc8390b`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/fc8390b3e5d0b8fab8e6591548431e902b678e7e). Flutter CI run [43265371561](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43265371561) and Android/iOS native smoke checks [43265371565](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43265371565) passed after fixing Dart `Path` class ambiguity; real iPhone/Android Fog of War QA remains pending.
+- **`README.md`** Today, Prioritized Backlog, MapShifter-inspired TODO and Milestones updated: Fog of War merged, four new original game-world styles as PR #12, themed route arrows and GPS/BLE device tests still pending.
+- **Next:** create PR #12 with six *game* vector styles total (not counting Classic), working on Explore, live Tracking, Digital Rope and saved activity route previews.
+
+
 ## 2026-11-12 — PR #11: Fog of War exploration (draft)
 
 - **Branch:** `feat/fog-of-war-exploration`; implements opt-in map fog with local coarse grid-cell reveal from already-accepted solo SmartTrace points (GPS accuracy ≤50 m), no extra location subscription and no Digital Rope live-map fog.
