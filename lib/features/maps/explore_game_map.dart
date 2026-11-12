@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_vector_tiles/flutter_map_vector_tiles.dart' as vt;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import 'map_tiles.dart';
 
-/// Explore-only map appearance. Safety and tracking maps retain their
-/// independent raster style settings until the themed map is field-tested.
+/// Shared map appearance for Explore, live Solo Tracking, Digital Rope and
+/// the route preview. The historical preference key is retained to preserve
+/// existing users' Explore selections after this app-wide rollout.
 enum ExploreMapTheme {
   classic('Classic', 'Existing map layers', Icons.public, null),
   adventureRpg(
@@ -64,8 +66,8 @@ final exploreVectorStyleProvider =
   return style;
 });
 
-/// Substitutes the styled vector basemap while leaving destination pins and
-/// all other flutter_map overlays in the original MapTab untouched.
+/// Substitutes a styled vector basemap without changing any map overlays,
+/// recorded route geometry, member positions or safety alert state.
 class ExploreGameTileLayer extends ConsumerWidget {
   const ExploreGameTileLayer({super.key, required this.theme});
 
@@ -86,5 +88,34 @@ class ExploreGameTileLayer extends ConsumerWidget {
       loading: () => const TsTileLayer(),
       error: (error, stackTrace) => const TsTileLayer(),
     );
+  }
+}
+
+/// Map theme shared by all FlutterMap screens. The original raster layer is
+/// always available, even before a vector style has finished loading.
+class ThemedMapBaseLayer extends ConsumerWidget {
+  const ThemedMapBaseLayer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final world = ref.watch(exploreMapThemeProvider);
+    return world == ExploreMapTheme.classic
+        ? const TsTileLayer()
+        : ExploreGameTileLayer(theme: world);
+  }
+}
+
+/// Source credit follows the actual selected base map on every screen.
+class ThemedMapAttribution extends ConsumerWidget {
+  const ThemedMapAttribution({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final world = ref.watch(exploreMapThemeProvider);
+    return world == ExploreMapTheme.classic
+        ? tsAttribution
+        : const SimpleAttributionWidget(
+            source: Text('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap'),
+          );
   }
 }

@@ -31,6 +31,7 @@ class MapStyleController extends Notifier<MapStyle> {
   @override
   MapStyle build() => MapStyle.satellite;
   void toggle() => state = state.next;
+  void select(MapStyle style) => state = style;
 }
 
 final mapStyleProvider = NotifierProvider<MapStyleController, MapStyle>(MapStyleController.new);

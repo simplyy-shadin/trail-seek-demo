@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../app/theme.dart';
-import '../maps/map_tiles.dart';
+import '../maps/explore_game_map.dart';
+import '../maps/map_theme_picker.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
 import '../rope/engine/geo.dart';
@@ -64,7 +65,7 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
               },
             ),
             children: [
-              const TsTileLayer(),
+              const ThemedMapBaseLayer(),
               if (t.adventureId != null) LearnedTrailLayer(adventureId: t.adventureId!),
               if (t.points.length > 1)
                 PolylineLayer(polylines: [Polyline(points: t.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.neon)]),
@@ -85,7 +86,7 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
                     ),
                   ),
                 ]),
-              tsAttribution,
+              const ThemedMapAttribution(),
             ],
           ),
           SafeArea(
@@ -144,7 +145,7 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
               children: [
                 RoundIconButton(icon: _follow ? Icons.my_location : Icons.location_searching, tooltip: 'Follow me', onTap: () => setState(() => _follow = true)),
                 const SizedBox(height: 8),
-                RoundIconButton(icon: Icons.layers_outlined, tooltip: 'Map style: ${ref.watch(mapStyleProvider).label}', onTap: () => ref.read(mapStyleProvider.notifier).toggle()),
+                RoundIconButton(icon: Icons.layers_outlined, tooltip: 'Map world: ${ref.watch(exploreMapThemeProvider).label}', onTap: () => showMapWorldPicker(context)),
               ],
             ),
           ),

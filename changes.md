@@ -1,5 +1,13 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #7 shared game maps (conflict resolution before merge)
+
+- **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7 — shared Adventure RPG / Night Trek / Classic basemaps across Explore, Solo Tracking, Digital Rope and saved route previews; common picker and regression tests.
+- **CI at PR head \`39eed3c\`:** Flutter checks, Android APK and unsigned iOS compilation passed (GitHub Actions runs \`43216910789\` and \`43216910777\`).
+- **Device tests:** still pending; game-map styling does not validate BLE SOS/background alerts or GPS route precision.
+- **Files and ranges:** see \`docs/change-notes/2026-11-12-shared-game-maps.md\`. Main README and PR checklist kept intact.
+
+
 ## 2026-11-12 — README daily work plan and pending backlog
 
 - **Documentation update on `main`:** refreshed `README.md` (L1–end) with the 12 Nov work checklist, current PR #6 / PR #7 state, evidence-based build/field-test distinctions, prioritized pending items and an upkeep policy for every PR/work session.
