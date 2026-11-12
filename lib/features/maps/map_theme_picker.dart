@@ -41,7 +41,10 @@ Future<void> showMapWorldPicker(BuildContext context) {
                   for (final theme in ExploreMapTheme.values)
                     ListTile(
                       key: ValueKey('map-world-${theme.name}'),
-                      leading: Icon(theme.icon),
+                      leading: CircleAvatar(
+                        backgroundColor: theme.accentColor.withValues(alpha: 0.15),
+                        child: Icon(theme.icon, color: theme.accentColor),
+                      ),
                       title: Text(theme.label),
                       subtitle: Text(theme.description),
                       selected: world == theme,
