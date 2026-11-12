@@ -27,6 +27,7 @@ class _MapTabState extends ConsumerState<MapTab> {
   @override
   Widget build(BuildContext context) {
     final destinations = ref.watch(destinationsProvider).value ?? const <Destination>[];
+    final selectedWorld = ref.watch(exploreMapThemeProvider);
     final active = ref.watch(activeSessionProvider);
     return Scaffold(
       appBar: AppBar(
@@ -60,7 +61,11 @@ class _MapTabState extends ConsumerState<MapTab> {
                     height: 46,
                     child: GestureDetector(
                       onTap: () => setState(() => _picked = d),
-                      child: Icon(Icons.location_on, size: 44, color: _picked?.id == d.id ? TsColors.neon : Colors.white),
+                      child: Icon(Icons.location_on, size: 44, color: _picked?.id == d.id
+                          ? TsColors.neon
+                          : (selectedWorld == ExploreMapTheme.classic
+                              ? Colors.white
+                              : selectedWorld.accentColor)),
                     ),
                   ),
               ]),

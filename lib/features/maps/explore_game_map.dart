@@ -24,6 +24,30 @@ enum ExploreMapTheme {
     'Dark terrain with bright paths and readable place names',
     Icons.nightlight_round,
     'asset://assets/maps/styles/night_trek.json',
+  ),
+  monsoonMist(
+    'Monsoon Mist',
+    'Rain-washed forests, misty roads and teal-blue rivers',
+    Icons.cloud,
+    'asset://assets/maps/styles/monsoon_mist.json',
+  ),
+  highlandQuest(
+    'Highland Quest',
+    'Mountain meadows, warm rock and bold ochre trails',
+    Icons.landscape,
+    'asset://assets/maps/styles/highland_quest.json',
+  ),
+  coastalExplorer(
+    'Coastal Explorer',
+    'Sandy shores, sea-green vegetation and bright waterways',
+    Icons.waves,
+    'asset://assets/maps/styles/coastal_explorer.json',
+  ),
+  canopyQuest(
+    'Canopy Quest',
+    'Deep jungle greens with glowing golden expedition trails',
+    Icons.park,
+    'asset://assets/maps/styles/canopy_quest.json',
   );
 
   const ExploreMapTheme(this.label, this.description, this.icon, this.styleUri);
@@ -32,6 +56,18 @@ enum ExploreMapTheme {
   final String description;
   final IconData icon;
   final String? styleUri;
+
+  /// Contrasting location-marker/preview accent for each map world.
+  /// Independent of the safety/route marker colors (Digital Rope is unchanged).
+  Color get accentColor => switch (this) {
+    ExploreMapTheme.classic => const Color(0xFF496E7C),
+    ExploreMapTheme.adventureRpg => const Color(0xFF985538),
+    ExploreMapTheme.nightTrek => const Color(0xFF94E9B2),
+    ExploreMapTheme.monsoonMist => const Color(0xFF236D78),
+    ExploreMapTheme.highlandQuest => const Color(0xFF9B5C32),
+    ExploreMapTheme.coastalExplorer => const Color(0xFF16759C),
+    ExploreMapTheme.canopyQuest => const Color(0xFFC77B2E),
+  };
 }
 
 class ExploreMapThemeController extends Notifier<ExploreMapTheme> {
@@ -69,7 +105,7 @@ final exploreVectorStyleProvider =
 });
 
 /// A user-selected local MBTiles archive replaces only the vector source
-/// named openmaptiles. Both theme JSON files are bundled, and no vector tile
+/// named openmaptiles. All six game-world style JSON assets are bundled, and no vector tile
 /// requests are made to OpenFreeMap while this provider is selected.
 final offlineGameVectorStyleProvider =
     FutureProvider.family<vt.Style, (ExploreMapTheme, String)>(

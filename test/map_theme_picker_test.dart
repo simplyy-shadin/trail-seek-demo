@@ -53,6 +53,28 @@ void main() {
     );
   });
 
+  testWidgets('four new Kerala game worlds are listed and selectable',
+      (tester) async {
+    final (container, store) = await _pumpPicker(tester);
+    addTearDown(container.dispose);
+    await tester.tap(find.text('Open map worlds'));
+    await tester.pumpAndSettle();
+
+    for (final value in ['Monsoon Mist', 'Highland Quest',
+        'Coastal Explorer', 'Canopy Quest']) {
+      expect(find.text(value), findsOneWidget);
+    }
+
+    final canopy = find.byKey(const ValueKey('map-world-canopyQuest'));
+    await tester.ensureVisible(canopy);
+    await tester.pumpAndSettle();
+    await tester.tap(canopy);
+    await tester.pumpAndSettle();
+
+    expect(container.read(exploreMapThemeProvider), ExploreMapTheme.canopyQuest);
+    expect(store.rawString(ExploreMapThemeController.storageKey), 'canopyQuest');
+  });
+
   testWidgets('choosing a Classic raster layer restores the Classic world',
       (tester) async {
     final (container, _) = await _pumpPicker(tester);
