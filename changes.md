@@ -1,5 +1,12 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #8 merged; PR #9 planned
+
+- **PR #8:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8, squash merge [`25772c4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/25772c4609568ae350b2fe852adc47ad6cbbbb95). Flutter tests, Android APK, and unsigned iOS compile passed (run IDs 43221639909 / 43221639878).
+- **Not field-tested:** Actual MBTiles picker, offline rendering, poor connectivity and battery. Test on physical iPhone and Android before production promises.
+- **Next:** provider-compliant, bounded vector region downloads to produce MBTiles on device. README today/pending state updated.
+
+
 ## 2026-11-12 — PR #8: native offline vector MBTiles pack import (draft)
 
 - **Branch:** `feat/offline-vector-mbtiles-packs`. Implemented a local, licensed `.mbtiles` import path for Adventure RPG and Night Trek, with stored pack selection, file validation, deletion and attribution.
