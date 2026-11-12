@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../app/theme.dart';
 import '../maps/explore_game_map.dart';
+import '../maps/fog_of_war_layer.dart';
 import '../maps/map_theme_picker.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/activity_category.dart';
@@ -66,6 +67,7 @@ class _TrackingScreenState extends ConsumerState<TrackingScreen> {
             ),
             children: [
               const ThemedMapBaseLayer(),
+              const FogOfWarLayer(),
               if (t.adventureId != null) LearnedTrailLayer(adventureId: t.adventureId!),
               if (t.points.length > 1)
                 PolylineLayer(polylines: [Polyline(points: t.points.map(_ll).toList(), strokeWidth: 5, color: TsColors.neon)]),

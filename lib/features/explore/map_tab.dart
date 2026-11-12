@@ -10,6 +10,7 @@ import '../../core/widgets/big_cards.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/destination.dart';
 import '../maps/explore_game_map.dart';
+import '../maps/fog_of_war_layer.dart';
 import '../maps/map_theme_picker.dart';
 
 /// Map tab: every Thrissur destination as a pin; tap one for its card.
@@ -50,6 +51,7 @@ class _MapTabState extends ConsumerState<MapTab> {
             ),
             children: [
               const ThemedMapBaseLayer(),
+              const FogOfWarLayer(),
               MarkerLayer(markers: [
                 for (final d in destinations)
                   Marker(

@@ -11,6 +11,7 @@ import '../../data/models/activity_record.dart';
 import '../../data/models/adventure.dart';
 import '../rope/engine/geo.dart';
 import '../trails/trail_learner.dart';
+import '../maps/fog_of_war_controller.dart';
 import '../trails/trail_store.dart';
 import 'position_stream.dart';
 import 'track_recorder.dart';
@@ -199,6 +200,15 @@ class TrackingController extends Notifier<TrackingState> {
       speedMps: p.speed.isNaN ? null : p.speed,
     );
     final accepted = _recorder.add(point);
+    // Reveal only fixes SmartTrace already accepted; Fog of War never starts
+    // another location subscription or changes recording/stop semantics.
+    if (accepted) {
+      ref.read(fogOfWarProvider.notifier).revealAcceptedPoint(
+        latitude: point.lat,
+        longitude: point.lng,
+        accuracyM: point.accuracyM,
+      );
+    }
     state = state.copyWith(
       // A rejected or stationary-jitter fix must not move the live marker.
       // Raw horizontal accuracy is still surfaced for a weak-GPS warning.
