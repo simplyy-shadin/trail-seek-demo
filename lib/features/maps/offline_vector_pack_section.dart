@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
 import 'offline_vector_packs.dart';
+import 'offline_vector_pack_audit.dart';
 import 'tile_math.dart';
 
 /// A native import workflow for licensed or self-hosted MBTiles vector maps.
@@ -54,6 +55,35 @@ class OfflineVectorPacksSection extends ConsumerWidget {
     }
   }
 
+  Future<void> _verify(BuildContext context, OfflineVectorPack pack) async {
+    final audit = await auditOfflineVectorPack(pack.path);
+    if (!context.mounted) return;
+    final zoomLabel = audit.minZoom != null && audit.maxZoom != null
+        ? 'Zoom levels: ${audit.minZoom}–${audit.maxZoom}.'
+        : 'Zoom range not supplied by archive.';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(audit.isValid ? 'Map file structure checked' : 'Map file problem'),
+        content: SingleChildScrollView(
+          child: Text(
+            '${audit.message}\n\n'
+            '${audit.bounds?.description ?? 'Archive does not declare valid geographic bounds.'}\n'
+            '$zoomLabel\n\n'
+            'A valid SQLite file does not guarantee every area or trail is covered. '
+            'Test the map in airplane mode before travel.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(offlineVectorPacksProvider);
@@ -90,6 +120,13 @@ class OfflineVectorPacksSection extends ConsumerWidget {
                 const SizedBox(height: 10),
                 const LinearProgressIndicator(),
               ],
+              const SizedBox(height: 6),
+              Text(
+                'An imported pack may be missing, damaged or limited to a small area. '
+                'Use Verify to check its database and declared coverage. '
+                'Verification does not prove that all walking routes are included.',
+                style: TsText.caption,
+              ),
               if (state.active != null) ...[
                 const SizedBox(height: 8),
                 Text('Active offline pack: ${state.active!.name}', style: TsText.caption),
@@ -130,7 +167,17 @@ class OfflineVectorPacksSection extends ConsumerWidget {
                   onTap: state.importing
                       ? null
                       : () => _select(context, ref, pack.id),
-                  trailing: IconButton(
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Verify offline map file',
+                        icon: const Icon(Icons.verified_user_outlined),
+                        onPressed: state.importing
+                            ? null
+                            : () => _verify(context, pack),
+                      ),
+                      IconButton(
                     tooltip: 'Delete ${pack.name}',
                     icon: const Icon(Icons.delete_outline, color: TsColors.danger),
                     onPressed: state.importing
@@ -158,6 +205,8 @@ class OfflineVectorPacksSection extends ConsumerWidget {
                                 .read(offlineVectorPacksProvider.notifier)
                                 .delete(pack.id);
                           },
+                      ),
+                    ],
                   ),
                 ),
               ),
