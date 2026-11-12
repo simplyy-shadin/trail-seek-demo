@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,6 +64,11 @@ void main() {
     expect(container.read(offlineVectorPacksProvider).active?.id, 'pack-1');
 
     await container.read(offlineVectorPacksProvider.notifier).select(null);
+    expect(container.read(offlineVectorPacksProvider).active, isNull);
+    await expectLater(
+      container.read(offlineVectorPacksProvider.notifier).select('pack-1'),
+      throwsA(isA<FileSystemException>()),
+    );
     expect(container.read(offlineVectorPacksProvider).active, isNull);
 
     final next = ProviderContainer(
