@@ -1,5 +1,14 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #9: bounded online-to-offline vector region packs (draft)
+
+- **Branch:** `feat/bounded-offline-vector-region-download`. User-confirmed regional download uses existing Thrissur destinations, OpenFreeMap vector tile endpoint, 3 km radius/zoom 12–16, max 3,000 tiles and 50,000,000 bytes, single-request network concurrency and identifying User-Agent.
+- **New files:** `lib/features/maps/offline_vector_region_download.dart` (L1–end), `lib/features/maps/offline_vector_region_section.dart` (L1–end), `test/offline_vector_region_download_test.dart` (L1–end), `docs/change-notes/2026-11-12-bounded-vector-region-download.md` (L1–end).
+- **Updated:** `lib/features/maps/offline_vector_packs.dart` (install-generated-pack), `lib/features/maps/offline_maps_screen.dart` (new UI and disable public-OSM raster bulk-download action), `pubspec.yaml` (sqlite3 dependency), `README.md` and `changes.md`.
+- **Policy:** OpenFreeMap terms https://openfreemap.org/tos/ (Oct 2026); legacy public OSM bulk downloader is blocked from the main UI. No unlimited downloads or fabricated coverage.
+- **Validation:** CI pending; iOS/Android offline mode, destination coverage, SQLite performance and user cancellation field tests pending. Full checksums and seamless offline fallback remain later work.
+
+
 ## 2026-11-12 — PR #8 merged; PR #9 planned
 
 - **PR #8:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8, squash merge [`25772c4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/25772c4609568ae350b2fe852adc47ad6cbbbb95). Flutter tests, Android APK, and unsigned iOS compile passed (run IDs 43221639909 / 43221639878).
