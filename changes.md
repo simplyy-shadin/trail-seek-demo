@@ -1,5 +1,12 @@
 # Trailseek — Changes
 
+## 2026-11-13 — PR #12 merged; PR #13 recorded-route arrows next
+
+- **PR #12:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12; [`e0991b4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/e0991b47491d0020979264fc7a8053c5614a2776). Flutter tests/analyzer [run 43291388631](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43291388631), Android APK and unsigned iOS [run 43291388794](https://github.com/simplyy-shadin/trailseek-adventure-platform/actions/runs/43291388794) passed.
+- **`README.md`:** Today, Pending, Game-map TODO and milestone entries mark PR #12 merged and PR #13 next. No claims of physical-map render validation or production readiness.
+- **Next scope:** static direction chevrons along existing accepted solo recordings / saved activity previews, not turn-by-turn navigation, no BLE/group map changes.
+
+
 ## 2026-11-13 — PR #12: six original Kerala game-map worlds (draft)
 
 - **Branch:** `feat/six-kerala-game-map-worlds`. Builds on PR #11 merged into `main`.
