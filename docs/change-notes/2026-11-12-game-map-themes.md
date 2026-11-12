@@ -23,10 +23,12 @@
 | `lib/features/explore/map_tab.dart` | Modified: imports, new bottom-sheet picker, Explore basemap selection and attribution |
 | `pubspec.yaml` | Modified: `flutter_map_vector_tiles` dependency and new asset directory |
 | `test/explore_game_map_test.dart` | New file L1–end: style schema/assets, persistent selection and unknown-value fallback |
+| `android/settings.gradle.kts` | Changed AGP plugin version from 9.1.0 to 9.1.1 (Flutter CI compatibility) |
 | `changes.md` | Summary entry for this feature |
 
 ## Verification and boundaries
 
+- Initial Flutter test/analysis workflow passed; initial Android smoke build failed on the pre-existing AGP 9.1.0 mismatch, now bumped to 9.1.1 for recheck.
 - Tests to run in PR CI: `flutter pub get`, `flutter analyze`, `flutter test`, plus Android APK and iOS unsigned compile.
 - Real devices have **not** yet verified tile styling, map FPS, battery use, weak coverage or offline behaviour.
 - The existing `pubspec.lock` is not manually edited: `flutter pub get` must regenerate package resolutions.
