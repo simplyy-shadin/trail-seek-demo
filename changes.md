@@ -1,5 +1,14 @@
 # Trailseek — Changes
 
+## 2026-11-12 — PR #8: native offline vector MBTiles pack import (draft)
+
+- **Branch:** `feat/offline-vector-mbtiles-packs`. Implemented a local, licensed `.mbtiles` import path for Adventure RPG and Night Trek, with stored pack selection, file validation, deletion and attribution.
+- **New files:** `lib/features/maps/offline_vector_packs.dart` (L1–end), `lib/features/maps/offline_vector_pack_section.dart` (L1–end), `test/offline_vector_packs_test.dart` (L1–end), `docs/change-notes/2026-11-12-offline-vector-mbtiles.md` (L1–end).
+- **Updated:** `lib/features/maps/explore_game_map.dart` (imports, offline renderer and attribution), `lib/features/maps/offline_maps_screen.dart` (map import UI), `pubspec.yaml` (MBTiles/file picker dependencies), `README.md` (today + pending), `changes.md`.
+- **Limitations:** This imports an externally supplied vector MBTiles pack; **no in-app region downloads or bundled Thrissur pack**. Legacy raster downloading is unchanged and still needs a policy-compliant provider. Offline area coverage and actual device rendering remain unverified.
+- **Validation:** Flutter and platform CI pending; manual iOS/Android file picker and airplane-mode tests pending. See the detailed change note.
+
+
 ## 2026-11-12 — PR #7 merged into `main`
 
 - **PR:** https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7; **squash merge:** [`54d887f`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/54d887fb39493a080e6a222a2535c683b5f05880).

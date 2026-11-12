@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../app/theme.dart';
 import '../../core/widgets/widgets.dart';
 import 'offline_areas.dart';
+import 'offline_vector_pack_section.dart';
 import 'tile_math.dart';
 
 class OfflineMapsScreen extends ConsumerWidget {
@@ -20,6 +21,8 @@ class OfflineMapsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
+          const OfflineVectorPacksSection(),
+          const SizedBox(height: 18),
           TsCard(
             child: Row(
               children: [
@@ -41,7 +44,7 @@ class OfflineMapsScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(s.error!, style: TsText.caption.copyWith(color: TsColors.warning)),
           ],
-          const SectionHeader('Downloaded areas'),
+          const SectionHeader('Legacy raster downloads'),
           if (s.areas.isEmpty)
             TsCard(
               onTap: () => context.go('/home'),
@@ -85,7 +88,8 @@ class OfflineMapsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           const Text(
             'Map data © OpenStreetMap contributors. Downloads cover 3 km around the trail at zoom 12–16. '
-            'A dedicated tile provider replaces the public OSM servers before public beta.',
+            'The legacy raster downloader currently uses public OSM tiles, which are not licensed for bulk offline downloads. '
+            'Do not use it to pre-download areas until the source is replaced. Imported MBTiles vector packs are separate.',
             style: TsText.caption,
           ),
         ],
