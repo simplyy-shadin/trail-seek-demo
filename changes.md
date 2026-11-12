@@ -1,5 +1,14 @@
 # Trailseek — Changes
 
+## 2026-11-12 — Shared game maps across journey screens (new feature PR)
+
+- Unified Adventure RPG, Night Trek and Classic selections across Explore, Solo Tracking, Digital Rope and the saved-activity route preview.
+- Added reusable theme sheet, Classic Satellite/Standard/Terrain choices and two regression widget tests; route lines, member markers, GPS and BLE safety logic untouched.
+- New files: `lib/features/maps/map_theme_picker.dart`, `test/map_theme_picker_test.dart`, `docs/change-notes/2026-11-12-shared-game-maps.md`.
+- Updated: `lib/features/maps/{explore_game_map,map_tiles}.dart`, `lib/features/{explore/map_tab,tracking/tracking_screen,rope/live_tracking_screen,activity/activity_summary_screen}.dart`, `changes.md`.
+- **Verification:** pending new PR CI and device tests; vector tile offline pre-download still out of scope.
+
+
 ## 2026-11-12 — Explore game-themed maps (feature PR)
 
 - Added Adventure RPG + Night Trek geographic vector basemaps and a persisted theme picker in Explore; Classic remains default and fallback.
