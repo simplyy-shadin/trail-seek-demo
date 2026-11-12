@@ -21,8 +21,8 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 - [x] **Merge [PR #10](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10)** — offline MBTiles audit and declared coverage, missing-file guard, failure cleanup; Flutter/Android/iOS CI passed, merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). On-device checks pending.
 - [x] **Merge [PR #11](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11)** — opt-in local Fog of War from accepted solo GPS fixes, privacy controls and tests. Flutter, Android and iOS CI passed; squash merged as [`fc8390b`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/fc8390b3e5d0b8fab8e6591548431e902b678e7e). Device QA pending.
 - [x] **Merge [PR #12](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12)** — six original game vector worlds + Classic, theme previews, marker colours and tests. Flutter, Android APK and unsigned iOS checks passed; squash commit [`e0991b4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/e0991b47491d0020979264fc7a8053c5614a2776). Device QA pending.
-- [x] **Implement PR #13 recorded-route direction chevrons on feature branch** — bounded geographic arrow sampling, heading/invalid-gap tests, cached solo route geometry, completed-activity preview; no additional GPS, BLE or navigation routing.
-- [ ] **Review PR #13 CI and merge only after green** — Flutter suite, Android APK and unsigned iOS builds; actual trail/map orientation/battery tests remain pending.
+- [x] **Merge [PR #13](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/13)** — recorded solo route-direction chevrons (not navigation), at most 24 markers, cached geometry, saved-route preview and regression tests. Flutter/Android/iOS passed; squash merged as [`f5e20a8`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/f5e20a88ec954afe40bc31abb41e1e0ae8f2abed). Device QA pending.
+- [ ] **Next: PR #14 themed destination/POI markers** — conservative category icons from verified/visible destination metadata; map collision, accessible labels and map performance checks first.
 - [ ] **Field-test the imported offline pack on devices** — after passing Flutter/Android/iOS CI, verify a real licensed MBTiles file, restart and airplane mode on both iPhone and Android.
 
 ## Current status at a glance
@@ -31,7 +31,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | --- | --- | --- |
 | Game maps in Explore | **PR #12 merged**: six original vector worlds (Adventure RPG, Night Trek, Monsoon Mist, Highland Quest, Coastal Explorer, Canopy Quest) + Classic | iPhone/Android cartographic/label contrast, offline rendering and battery checks |
 | Game maps across journeys | **Merged in PR #7**: themed maps on Explore, Solo Tracking, Digital Rope and saved activity; **PR #11 merged**: opt-in Fog of War on Explore + Solo only | Physical-device Fog paint/zoom/pan and GPS/BLE safety overlay verification |
-| Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist in code; previous CI passed | Trail curvature, indoor/forest accuracy, stopping lifecycle and battery **field** measurements |
+| Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist; **PR #13 merged** static historical-direction route chevrons with geometry/CI tests | Trail curvature, indoor/forest accuracy, stopping lifecycle, route-map camera rotation and battery **field** measurements |
 | Digital Rope BLE | Group safety engine, BLE transport, route markers and warnings are implemented in code | iOS locked/background behavior, multi-hop reliability, mixed iPhone/Android groups, alert latency and real battery use |
 | Offline maps | **PRs #8–#10 merged**: MBTiles import, bounded downloads, structural audits and declared coverage; CI green | iPhone/Android airplane-mode and actual coverage/battery tests; audit cannot prove map completeness |
 | Explorer experience | Discovery, adventure history, XP, badges, certificates/share-oriented flows are in progress | Content verification, end-to-end workflows and real user QA |
@@ -54,8 +54,9 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | **P1** | Thrissur pilot destination data, access rules, permissions, guide and program information | Verified source-backed entries; unverified items remain labelled |
 | **P1** | Field-test merged PR #11 Fog of War on iPhone/Android | Local persistence, privacy opt-out/reset, fog repaint alignment and battery QA |
 | **P2** | Field-test PR #12 six original game worlds and themed destination pins | Flutter/Android/iOS CI green; physical devices' roads/trails, label contrast, attribution and offline coverage still pending |
-| **P2** | Validate PR #13 recorded-direction chevrons on solo and activity maps | Flutter geometry tests and native builds, cap/skip GPS-gap validation, manual camera-rotation / power QA; not navigation |
-| **P2** | More advanced game-themed POI icons, animations and live navigation graphics | Design review, accessible labels, map collision control and SOS-safe, low-power performance |
+| **P2** | Field-test merged PR #13 recorded-direction chevrons on solo and activity maps | Flutter/Android/iOS CI passed; manual camera rotation, path accuracy and battery QA outstanding; not navigation |
+| **P2** | Next PR #14 game-themed destination/POI marker icons | Conservative destination metadata mapping, accessibility labels, collision handling, Flutter/native CI and device QA |
+| **P2** | Advanced animated icons and live navigation graphics | Design review, map collision control, SOS-safe performance and approved routing sources |
 | **P2** | Original exploration enhancements: adventure unlocks, Fog of War rewards, explorer passport and achievement polish | Product review, stored unlock data, UX/device validation |
 | **P2** | Turn-by-turn routes, voice guidance, alternate routes and multi-stop planning | Grounded routing provider/license, navigation tests and safety/accuracy evaluation |
 | **P2** | Place/landmark/business search and saved map locations | Verified place index, full search, favorites and privacy controls |
@@ -72,7 +73,8 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 - [x] **Initial offline vector map packs** — PRs #8–#10; local MBTiles import, bounded download and file-health checks merged, device tests pending.
 - [x] **Fog of War / explored terrain — PR #11 merged** — opt-in local-only reveal from accepted solo GPS fixes, reset/history controls, no extra GPS, group safety map untouched; phone tests pending.
 - [x] **At least six original game-world styles — PR #12 merged** — six vector styles (four new worlds beyond Adventure RPG/Night Trek), Classic separate. Flutter/Android/iOS CI passed, physical offline/contrast QA pending.
-- [ ] **Game-inspired route elements — PR #13 draft** — static directional chevrons coded for solo/saved tracks, cached and capped; Flutter/native CI and device QA pending. Animated icons, POI and navigation remain backlog; SOS map untouched.
+- [x] **Historic route-direction chevrons — PR #13 merged** — solo/saved routes only, capped/static/cached; Flutter/Android/iOS CI passed; map rotation and battery device QA pending.
+- [ ] **Game-inspired POI markers and route animations — PR #14 next** — map destination categories and accessible marker designs; animated navigation still pending; group SOS map remains untouched.
 - [ ] **Turn-by-turn directions and voice guidance** — licensed routing and voice/navigation flow; not yet implemented.
 - [ ] **Alternate route suggestions and multi-stop trip planning** — source-verified routing and trail permission checks.
 - [ ] **Full places / restaurants / landmarks search and favorites** — distinguish verified Trailseek adventures from general POI data.
@@ -85,7 +87,8 @@ This is a **feature-comparison backlog**, not a claim of copying another product
 
 | Date | Change | Status |
 | --- | --- | --- |
-| **13 Nov 2026** | PR #13 — recorded-route direction markers (`feat/recorded-route-direction-arrows`) | **Draft implementation**; geometry/UI/tests committed, CI pending |
+| **13 Nov 2026** | PR #14 — contextual destination/POI marker icons | **Next planned milestone**; design and CI not started |
+| **13 Nov 2026** | [PR #13 — recorded-route direction chevrons](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/13) | **Merged** (`f5e20a8`); Flutter/Android/iOS CI passed, device QA pending |
 | **13 Nov 2026** | [PR #12 — six game worlds](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/12) | **Merged** (`e0991b4`); Flutter/Android/iOS checks passed, device QA pending |
 | **13 Nov 2026** | [PR #11 — opt-in Fog of War](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/11) | **Merged** (`fc8390b`); Flutter/Android/iOS CI passed, hardware QA pending |
 | **12 Nov 2026** | [PR #10 — offline MBTiles integrity and coverage](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10) | **Merged** (`5c72c8a`); Flutter/Android/iOS CI passed, device QA pending |
