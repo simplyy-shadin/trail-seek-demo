@@ -18,8 +18,8 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 - [x] **Research offline vector archive support and provider policy** — local MBTiles can supply map vectors without network. OpenFreeMap permits bounded downloads under its current terms; public OSM raster bulk downloads remain prohibited.
 - [x] **Merge [PR #8](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8)** — offline MBTiles import, validation, theme integration and regression tests; Flutter, Android and iOS CI passed. Squash commit [`25772c4`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/25772c4609568ae350b2fe852adc47ad6cbbbb95).
 - [x] **Merge [PR #9](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9)** — bounded Thrissur vector-region downloads; Flutter, Android and iOS checks passed. Squash commit [`a8f897e`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/a8f897e1ebd7b2ab3928573fd51f8ab328d51960). Device QA remains pending.
-- [x] **Implement offline-pack validation on PR #10 branch** — explicit SQLite structure audit, reported coverage bounds, missing-file activation guard and late download-failure cleanup.
-- [ ] **Complete PR #10 CI and review** — confirm new audit tests, Android APK and iOS unsigned compile. Validate on physical devices before any safety claim.
+- [x] **Merge [PR #10](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10)** — offline MBTiles audit and declared coverage, missing-file guard, failure cleanup; Flutter/Android/iOS CI passed, merged as [`5c72c8a`](https://github.com/simplyy-shadin/trailseek-adventure-platform/commit/5c72c8a8252a3ea4cc84b982233b3a6668fa5b65). On-device checks pending.
+- [ ] **Start PR #11 — opt-in Fog of War exploration layer** — record *accepted solo tracking points only*, reveal travelled map zones, persist locally, add enable/reset controls and automated tests. Does not alter Digital Rope safety tracking.
 - [ ] **Field-test the imported offline pack on devices** — after passing Flutter/Android/iOS CI, verify a real licensed MBTiles file, restart and airplane mode on both iPhone and Android.
 
 ## Current status at a glance
@@ -30,7 +30,7 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | Game maps across journeys | **Merged in PR #7**: themes on Solo Tracking, Digital Rope and saved activity maps; Flutter, Android and iOS CI passed | Physical-device map/GPS/BLE overlay testing |
 | Solo GPS / SmartTrace | Tracking, adaptive sampling/filtering and saved routes exist in code; previous CI passed | Trail curvature, indoor/forest accuracy, stopping lifecycle and battery **field** measurements |
 | Digital Rope BLE | Group safety engine, BLE transport, route markers and warnings are implemented in code | iOS locked/background behavior, multi-hop reliability, mixed iPhone/Android groups, alert latency and real battery use |
-| Offline maps | **PR #8 and #9 merged**: local MBTiles import and bounded in-app vector download; **PR #10 in development**: archive verification and coverage audit | PR #10 CI, iOS/Android offline field tests, corrupt-file handling, real trail coverage and power profile |
+| Offline maps | **PRs #8–#10 merged**: MBTiles import, bounded downloads, structural audits and declared coverage; CI green | iPhone/Android airplane-mode and actual coverage/battery tests; audit cannot prove map completeness |
 | Explorer experience | Discovery, adventure history, XP, badges, certificates/share-oriented flows are in progress | Content verification, end-to-end workflows and real user QA |
 | Backend / releases | Supabase-related code and GitHub CI/build workflows present | Production auth/sync security review, complete device distribution, signed builds and closed beta readiness |
 
@@ -45,20 +45,43 @@ This is the **working to-do list**, not a list of completed functionality. Tick 
 | **P0** | GPS SmartTrace real-world validation in forests, switchbacks, indoor/poor-GNSS areas, and start/pause/stop | Comparison with walked path and recorded accuracy, observed battery and lifecycle behavior |
 | **P1** | Validate merged PR #8 using licensed MBTiles pilot files in Athirappilly, Vazhachal and Chimmony | On-device import, persistence/restart, offline coverage, correct attribution and storage measurements |
 | **P1** | Field-test merged PR #9 provider-compliant vector region downloader | Actual download, size limit, cancellation, archive coverage and airplane mode on iPhone and Android |
-| **P1** | Complete PR #10 archive health/coverage audit and verify on devices | Flutter/Android/iOS CI green, usable verification action, missing/corrupted file notices, large-pack audit performance |
+| **P1** | Validate PR #10 merged archive health/coverage audit on physical phones | Large-pack audit responsiveness, missing/corrupted file notices, offline coverage truthfulness |
 | **P1** | Map polish: readable trails/labels, theme iconography, fallback and low-power performance | Screenshots and profile results on both platforms |
 | **P1** | Backend/auth, community sync, guide/booking access controls and privacy/security review | End-to-end tests and security checks rather than stub/demo behavior |
 | **P1** | Thrissur pilot destination data, access rules, permissions, guide and program information | Verified source-backed entries; unverified items remain labelled |
-| **P2** | More game themes, Fog of War, adventure unlocks and explorer passport enhancements | Product review, working prototypes, UX/device validation |
+| **P1** | PR #11 opt-in Fog of War — reveal walked areas from validated, accepted solo GPS fixes; no background GPS added | Local persistence, privacy toggle/reset, GPS noise controls, widget tests and both native builds |
+| **P2** | Six+ distinctive original game map worlds with themed route markers/arrows and animation | Design review, accessible labels, smooth performance, iOS/Android map QA |
+| **P2** | Original exploration enhancements: adventure unlocks, Fog of War rewards, explorer passport and achievement polish | Product review, stored unlock data, UX/device validation |
+| **P2** | Turn-by-turn routes, voice guidance, alternate routes and multi-stop planning | Grounded routing provider/license, navigation tests and safety/accuracy evaluation |
+| **P2** | Place/landmark/business search and saved map locations | Verified place index, full search, favorites and privacy controls |
+| **P3** | Investigate CarPlay, watch companion and home-screen widgets | Platform entitlement/API review, scoped prototypes and device approval tests |
 | **P2** | Release readiness: signed builds, device distribution, app-store requirements, monitoring and beta QA | Repeatable release checklist, tester feedback, launch decision |
 
 **Pilot geography:** Thrissur district — **Athirappilly, Vazhachal, Chimmony**.
+
+## MapShifter-inspired game-map TODO — Trailseek's original implementation
+
+This is a **feature-comparison backlog**, not a claim of copying another product's proprietary graphics or code. Distinguish existing map themes from advanced navigation features, and never imply navigation reliability from CI alone.
+
+- [x] **Classic / Adventure RPG / Night Trek selectable basemaps** — PRs #6–#7, theme selection applies to Explore, tracking, Digital Rope and activity previews; device polish pending.
+- [x] **Initial offline vector map packs** — PRs #8–#10; local MBTiles import, bounded download and file-health checks merged, device tests pending.
+- [ ] **Fog of War / explored terrain** — PR #11 next; optional local-only reveal from accepted solo GPS track points, reset/history controls, no extra GPS service, group safety map unaffected.
+- [ ] **At least six original game-world styles** — design three or more additional Trailseek-specific styles; test readable labels in forests and low light.
+- [ ] **Game-inspired navigation elements** — distinct destination icons, visible route line and configurable guidance arrows/animations that never mask SOS alerts.
+- [ ] **Turn-by-turn directions and voice guidance** — licensed routing and voice/navigation flow; not yet implemented.
+- [ ] **Alternate route suggestions and multi-stop trip planning** — source-verified routing and trail permission checks.
+- [ ] **Full places / restaurants / landmarks search and favorites** — distinguish verified Trailseek adventures from general POI data.
+- [ ] **Exploration rewards, Fog of War achievements and explorer-passport polish** — build on existing XP/badges/certificates, not claim full parity.
+- [ ] **CarPlay, Apple Watch and home-screen widget feasibility** — platform entitlement and battery review before development.
+
+**Physical-test gates remain open:** iPhone↔Android Digital Rope alerts, SmartTrace GPS curve/indoor/forest accuracy, offline map coverage, voice/SOS sound restrictions and battery budgets.
 
 ## Recent milestones and pull requests
 
 | Date | Change | Status |
 | --- | --- | --- |
-| **12 Nov 2026** | PR #10 — offline MBTiles integrity and coverage (`fix/offline-map-pack-integrity-coverage`) | **In development**; CI and device QA pending |
+| **12 Nov 2026** | PR #11 — Fog of War exploration | **Next**; local, opt-in GPS discovery design and tests |
+| **12 Nov 2026** | [PR #10 — offline MBTiles integrity and coverage](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/10) | **Merged** (`5c72c8a`); Flutter/Android/iOS CI passed, device QA pending |
 | **12 Nov 2026** | [PR #9 — bounded vector region downloads](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/9) | **Merged** (`a8f897e`); Flutter/Android/iOS checks passed, device QA pending |
 | **12 Nov 2026** | [PR #8 — offline MBTiles pack import](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/8) | **Merged** (`25772c4`); Flutter/Android/iOS CI passed; device validation pending |
 | **12 Nov 2026** | [PR #7 — shared game maps](https://github.com/simplyy-shadin/trailseek-adventure-platform/pull/7) | **Merged** (`54d887f`); Flutter tests, Android APK and iOS compile passed; device review pending |
@@ -70,7 +93,7 @@ See [`changes.md`](changes.md), [`CHANGE_HISTORY.md`](CHANGE_HISTORY.md) and [`d
 ## Stack and developer setup
 
 - **Flutter / Dart** (`pubspec.yaml` declares app version **0.6.1+28**), Riverpod and go_router.
-- **Maps:** `flutter_map`, OpenStreetMap-linked raster sources, `flutter_map_vector_tiles`, MapLibre-style JSON, OpenFreeMap-hosted vector data. PR #8 merged native `flutter_map_vector_tiles_mbtiles` and `file_picker` for importing licensed archive files. Small-region vector downloads are the next planned change.
+- **Maps:** `flutter_map`, OpenStreetMap-linked raster sources, `flutter_map_vector_tiles`, MapLibre-style JSON and OpenFreeMap-hosted vector data. PRs #8–#10 merged MBTiles import, small-region downloads, SQLite audit and attribution; device/offline coverage remains unverified.
 - **GPS:** geolocator and in-app tracking/filtering logic.
 - **Group safety:** Bluetooth Low Energy; iOS/Android background restrictions apply.
 - **Data:** local stores and Supabase integrations; production security and release readiness require validation.
